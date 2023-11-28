@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
-
 import 'dart:async';
 
 import 'package:args/command_runner.dart';
@@ -63,37 +61,66 @@ Future<int> run(
     StackTrace? firstStackTrace;
     return runZoned<Future<int>>(() async {
       try {
+<<<<<<< HEAD
         // Disable analytics if user passes in the `--disable-telemetry` option
         // `flutter --disable-telemetry`
+=======
+        if (args.contains('--disable-analytics') &&
+            args.contains('--enable-analytics')) {
+          throwToolExit(
+              'Both enable and disable analytics commands were detected '
+              'when only one can be supplied per invocation.',
+              exitCode: 1);
+        }
+
+        // Disable analytics if user passes in the `--disable-analytics` option
+        // "flutter --disable-analytics"
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
         //
-        // Same functionality as `flutter config --no-analytics` for disabling
+        // Same functionality as "flutter config --no-analytics" for disabling
         // except with the `value` hard coded as false
-        if (args.contains('--disable-telemetry')) {
-          const bool value = false;
+        if (args.contains('--disable-analytics')) {
           // The tool sends the analytics event *before* toggling the flag
           // intentionally to be sure that opt-out events are sent correctly.
-          AnalyticsConfigEvent(enabled: value).send();
-          if (!value) {
-            // Normally, the tool waits for the analytics to all send before the
-            // tool exits, but only when analytics are enabled. When reporting that
-            // analytics have been disable, the wait must be done here instead.
-            await globals.flutterUsage.ensureAnalyticsSent();
-          }
-          globals.flutterUsage.enabled = value;
+          AnalyticsConfigEvent(enabled: false).send();
+
+          // Normally, the tool waits for the analytics to all send before the
+          // tool exits, but only when analytics are enabled. When reporting that
+          // analytics have been disable, the wait must be done here instead.
+          await globals.flutterUsage.ensureAnalyticsSent();
+
+          globals.flutterUsage.enabled = false;
           globals.printStatus('Analytics reporting disabled.');
 
           // TODO(eliasyishak): Set the telemetry for the unified_analytics
           //  package as well, the above will be removed once we have
           //  fully transitioned to using the new package
-          await globals.analytics.setTelemetry(value);
+          await globals.analytics.setTelemetry(false);
         }
+
+        // Enable analytics if user passes in the `--enable-analytics` option
+        // `flutter --enable-analytics`
+        //
+        // Same functionality as `flutter config --analytics` for enabling
+        // except with the `value` hard coded as true
+        if (args.contains('--enable-analytics')) {
+          // The tool sends the analytics event *before* toggling the flag
+          // intentionally to be sure that opt-out events are sent correctly.
+          AnalyticsConfigEvent(enabled: true).send();
+
+          globals.flutterUsage.enabled = true;
+          globals.printStatus('Analytics reporting enabled.');
+
+          await globals.analytics.setTelemetry(true);
+        }
+
 
         await runner.run(args);
 
         // Triggering [runZoned]'s error callback does not necessarily mean that
         // we stopped executing the body. See https://github.com/dart-lang/sdk/issues/42150.
         if (firstError == null) {
-          return await _exit(0, shutdownHooks: shutdownHooks);
+          return await exitWithHooks(0, shutdownHooks: shutdownHooks);
         }
 
         // We already hit some error, so don't return success. The error path
@@ -129,7 +156,7 @@ Future<int> _handleToolError(
     globals.printError('${error.message}\n');
     globals.printError("Run 'flutter -h' (or 'flutter <command> -h') for available flutter commands and options.");
     // Argument error exit code.
-    return _exit(64, shutdownHooks: shutdownHooks);
+    return exitWithHooks(64, shutdownHooks: shutdownHooks);
   } else if (error is ToolExit) {
     if (error.message != null) {
       globals.printError(error.message!);
@@ -137,14 +164,14 @@ Future<int> _handleToolError(
     if (verbose) {
       globals.printError('\n$stackTrace\n');
     }
-    return _exit(error.exitCode ?? 1, shutdownHooks: shutdownHooks);
+    return exitWithHooks(error.exitCode ?? 1, shutdownHooks: shutdownHooks);
   } else if (error is ProcessExit) {
     // We've caught an exit code.
     if (error.immediate) {
       exit(error.exitCode);
       return error.exitCode;
     } else {
-      return _exit(error.exitCode, shutdownHooks: shutdownHooks);
+      return exitWithHooks(error.exitCode, shutdownHooks: shutdownHooks);
     }
   } else {
     // We've crashed; emit a log report.
@@ -154,7 +181,7 @@ Future<int> _handleToolError(
       // Print the stack trace on the bots - don't write a crash report.
       globals.stdio.stderrWrite('$error\n');
       globals.stdio.stderrWrite('$stackTrace\n');
-      return _exit(1, shutdownHooks: shutdownHooks);
+      return exitWithHooks(1, shutdownHooks: shutdownHooks);
     }
 
     // Report to both [Usage] and [CrashReportSender].
@@ -195,7 +222,7 @@ Future<int> _handleToolError(
       final File file = await _createLocalCrashReport(details);
       await globals.crashReporter!.informUser(details, file);
 
-      return _exit(1, shutdownHooks: shutdownHooks);
+      return exitWithHooks(1, shutdownHooks: shutdownHooks);
     // This catch catches all exceptions to ensure the message below is printed.
     } catch (error, st) { // ignore: avoid_catches_without_on_clauses
       globals.stdio.stderrWrite(
@@ -261,6 +288,7 @@ Future<File> _createLocalCrashReport(CrashDetails details) async {
 
   return crashFile;
 }
+<<<<<<< HEAD
 
 Future<int> _exit(int code, {required ShutdownHooks shutdownHooks}) async {
   // Need to get the boolean returned from `messenger.shouldDisplayLicenseTerms()`
@@ -334,3 +362,5 @@ Future<int> _exit(int code, {required ShutdownHooks shutdownHooks}) async {
   await completer.future;
   return code;
 }
+=======
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52

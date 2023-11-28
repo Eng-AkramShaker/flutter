@@ -9,7 +9,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+<<<<<<< HEAD
 import '../rendering/mock_canvas.dart';
+=======
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 import '../rendering/rendering_tester.dart';
 
 class SpyFixedExtentScrollController extends FixedExtentScrollController {
@@ -572,7 +575,11 @@ void main() {
     ));
 
     // Children are painted two times for whatever reason
+<<<<<<< HEAD
     expect(paintedChildren, <int>[0, 0, 1, 1]);
+=======
+    expect(paintedChildren, <int>[0, 1, 0, 1]);
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 
     // Expect hitting 0 and 1, which are painted
     await tester.tap(find.byKey(const ValueKey<int>(0)));

@@ -295,7 +295,6 @@ class WebAssetServer implements AssetReader {
         server,
         PackageUriMapper(packageConfig),
         digestProvider,
-        server.basePath,
         packageConfig.toPackageUri(
           globals.fs.file(entrypoint).absolute.uri,
         ),
@@ -347,6 +346,7 @@ class WebAssetServer implements AssetReader {
   ///
   /// It should have no leading or trailing slashes.
   @visibleForTesting
+  @override
   String basePath;
 
   // handle requests for JavaScript source, dart sources maps, or asset files.
@@ -493,7 +493,7 @@ class WebAssetServer implements AssetReader {
 
   /// Write a single file into the in-memory cache.
   void writeFile(String filePath, String contents) {
-    writeBytes(filePath, utf8.encode(contents) as Uint8List);
+    writeBytes(filePath, const Utf8Encoder().convert(contents));
   }
 
   void writeBytes(String filePath, Uint8List contents) {
@@ -778,7 +778,7 @@ class WebDevFS implements DevFS {
 
     final int selectedPort = webAssetServer.selectedPort;
     if (buildInfo.dartDefines.contains('FLUTTER_WEB_AUTO_DETECT=true')) {
-      webAssetServer.webRenderer = WebRendererMode.autoDetect;
+      webAssetServer.webRenderer = WebRendererMode.auto;
     } else if (buildInfo.dartDefines.contains('FLUTTER_WEB_USE_SKIA=true')) {
       webAssetServer.webRenderer = WebRendererMode.canvaskit;
     }

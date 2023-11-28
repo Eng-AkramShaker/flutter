@@ -9,8 +9,6 @@ import 'package:flutter_tools/src/base/io.dart' as io;
 import 'package:flutter_tools/src/base/logger.dart';
 import 'package:flutter_tools/src/convert.dart';
 import 'package:flutter_tools/src/device.dart';
-import 'package:flutter_tools/src/ios/xcodeproj.dart';
-import 'package:flutter_tools/src/project.dart';
 import 'package:flutter_tools/src/vmservice.dart';
 import 'package:test/fake.dart';
 import 'package:vm_service/vm_service.dart' as vm_service;
@@ -83,6 +81,7 @@ void main() {
     );
 
     expect(mockVMService.services, containsPair(kFlutterMemoryInfoServiceName, kFlutterToolAlias));
+<<<<<<< HEAD
   });
 
   testWithoutContext('VmService registers flutterGetIOSBuildOptions service', () async {
@@ -105,6 +104,8 @@ void main() {
     );
 
     expect(mockVMService.services, containsPair(kFlutterGetAndroidBuildVariantsServiceName, kFlutterToolAlias));
+=======
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
   });
 
   testWithoutContext('VM Service registers flutterGetSkSL service', () async {
@@ -288,6 +289,7 @@ void main() {
     ]));
   });
 
+<<<<<<< HEAD
   testWithoutContext('VmService forward flutterGetIOSBuildOptions request and response correctly', () async {
     final MockVMService vmService = MockVMService();
     final XcodeProjectInfo expectedProjectInfo = XcodeProjectInfo(
@@ -350,6 +352,8 @@ void main() {
     expect(result['schemes'], isNull);
   });
 
+=======
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
   testWithoutContext('runInView forwards arguments correctly', () async {
     final FakeVmServiceHost fakeVmServiceHost = FakeVmServiceHost(
       requests: <VmServiceExpectation>[
@@ -529,10 +533,6 @@ void main() {
           errorCode: RPCErrorCodes.kServiceDisappeared,
         ),
         const FakeVmServiceRequest(
-          method: kScreenshotMethod,
-          errorCode: RPCErrorCodes.kServiceDisappeared,
-        ),
-        const FakeVmServiceRequest(
           method: kScreenshotSkpMethod,
           errorCode: RPCErrorCodes.kServiceDisappeared,
         ),
@@ -565,9 +565,6 @@ void main() {
 
     final List<FlutterView> views = await fakeVmServiceHost.vmService.getFlutterViews();
     expect(views, isEmpty);
-
-    final vm_service.Response? screenshot = await fakeVmServiceHost.vmService.screenshot();
-    expect(screenshot, isNull);
 
     final vm_service.Response? screenshotSkp = await fakeVmServiceHost.vmService.screenshotSkp();
     expect(screenshotSkp, isNull);
@@ -937,6 +934,7 @@ void main() {
   });
 }
 
+<<<<<<< HEAD
 class MockFlutterProject extends Fake implements FlutterProject {
   MockFlutterProject({
     IosProject? mockedIos,
@@ -971,6 +969,8 @@ class MockAndroidProject extends Fake implements AndroidProject {
 
 class MockLogger extends Fake implements Logger { }
 
+=======
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 class MockVMService extends Fake implements vm_service.VmService {
   final Map<String, String> services = <String, String>{};
   final Map<String, vm_service.ServiceCallback> serviceCallBacks = <String, vm_service.ServiceCallback>{};

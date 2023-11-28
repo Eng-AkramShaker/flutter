@@ -25,6 +25,7 @@
   "continueButtonLabel": "Continua",
   "copyButtonLabel": "Copia",
   "cutButtonLabel": "Retalla",
+  "scanTextButtonLabel": "Escaneja text",
   "okButtonLabel": "D'ACORD",
   "pasteButtonLabel": "Enganxa",
   "selectAllButtonLabel": "Selecciona-ho tot",
@@ -134,5 +135,15 @@
   "scrimLabel": "Fons atenuat",
   "bottomSheetLabel": "Full inferior",
   "scrimOnTapHint": "Tanca $modalRouteContentName",
-  "keyboardKeyShift": "Maj"
+  "keyboardKeyShift": "Maj",
+  "expansionTileExpandedHint": "fes doble toc per replegar",
+  "expansionTileCollapsedHint": "fes doble toc per desplegar",
+  "expansionTileExpandedTapHint": "Replega",
+  "expansionTileCollapsedTapHint": "Desplega per obtenir més informació",
+  "expandedHint": "S'ha replegat",
+  "collapsedHint": "S'ha desplegat",
+  "menuDismissLabel": "Ignora el menú",
+  "lookUpButtonLabel": "Look Up",
+  "searchWebButtonLabel": "Search Web",
+  "shareButtonLabel": "Share..."
 }

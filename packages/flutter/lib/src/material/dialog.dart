@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:ui';
+import 'dart:ui' show clampDouble, lerpDouble;
 
-import 'package:flutter/foundation.dart' show clampDouble;
-import 'package:flutter/widgets.dart';
+import 'package:flutter/cupertino.dart';
 
 import 'color_scheme.dart';
 import 'colors.dart';
@@ -183,7 +182,7 @@ class Dialog extends StatelessWidget {
   /// See the enum [Clip] for details of all possible options and their common
   /// use cases.
   ///
-  /// Defaults to [Clip.none], and must not be null.
+  /// Defaults to [Clip.none].
   /// {@endtemplate}
   final Clip clipBehavior;
 
@@ -394,6 +393,69 @@ class AlertDialog extends StatelessWidget {
     this.alignment,
     this.scrollable = false,
   });
+
+  /// Creates an adaptive [AlertDialog] based on whether the target platform is
+  /// iOS or macOS, following Material design's
+  /// [Cross-platform guidelines](https://material.io/design/platform-guidance/cross-platform-adaptation.html).
+  ///
+  /// On iOS and macOS, this constructor creates a [CupertinoAlertDialog]. On
+  /// other platforms, this creates a Material design [AlertDialog].
+  ///
+  /// Typically passed as a child of [showAdaptiveDialog], which will display
+  /// the alert differently based on platform.
+  ///
+  /// If a [CupertinoAlertDialog] is created only these parameters are used:
+  /// [title], [content], [actions], [scrollController],
+  /// [actionScrollController], [insetAnimationDuration], and
+  /// [insetAnimationCurve]. If a material [AlertDialog] is created,
+  /// [scrollController], [actionScrollController], [insetAnimationDuration],
+  /// and [insetAnimationCurve] are ignored.
+  ///
+  /// The target platform is based on the current [Theme]: [ThemeData.platform].
+  ///
+  /// {@tool dartpad}
+  /// This demo shows a [TextButton] which when pressed, calls [showAdaptiveDialog].
+  /// When called, this method displays an adaptive dialog above the current
+  /// contents of the app, with different behaviors depending on target platform.
+  ///
+  /// [CupertinoDialogAction] is conditionally used as the child to show more
+  /// platform specific design.
+  ///
+  /// ** See code in examples/api/lib/material/dialog/adaptive_alert_dialog.0.dart **
+  /// {@end-tool}
+  const factory AlertDialog.adaptive({
+    Key? key,
+    Widget? icon,
+    EdgeInsetsGeometry? iconPadding,
+    Color? iconColor,
+    Widget? title,
+    EdgeInsetsGeometry? titlePadding,
+    TextStyle? titleTextStyle,
+    Widget? content,
+    EdgeInsetsGeometry? contentPadding,
+    TextStyle? contentTextStyle,
+    List<Widget>? actions,
+    EdgeInsetsGeometry? actionsPadding,
+    MainAxisAlignment? actionsAlignment,
+    OverflowBarAlignment? actionsOverflowAlignment,
+    VerticalDirection? actionsOverflowDirection,
+    double? actionsOverflowButtonSpacing,
+    EdgeInsetsGeometry? buttonPadding,
+    Color? backgroundColor,
+    double? elevation,
+    Color? shadowColor,
+    Color? surfaceTintColor,
+    String? semanticLabel,
+    EdgeInsets insetPadding,
+    Clip clipBehavior,
+    ShapeBorder? shape,
+    AlignmentGeometry? alignment,
+    bool scrollable,
+    ScrollController? scrollController,
+    ScrollController? actionScrollController,
+    Duration insetAnimationDuration,
+    Curve insetAnimationCurve,
+  }) = _AdaptiveAlertDialog;
 
   /// An optional icon to display at the top of the dialog.
   ///
@@ -638,6 +700,7 @@ class AlertDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     assert(debugCheckHasMaterialLocalizations(context));
     final ThemeData theme = Theme.of(context);
+
     final DialogTheme dialogTheme = DialogTheme.of(context);
     final DialogTheme defaults = theme.useMaterial3 ? _DialogDefaultsM3(context) : _DialogDefaultsM2(context);
 
@@ -655,7 +718,7 @@ class AlertDialog extends StatelessWidget {
 
     // The paddingScaleFactor is used to adjust the padding of Dialog's
     // children.
-    final double paddingScaleFactor = _paddingScaleFactor(MediaQuery.textScaleFactorOf(context));
+    final double paddingScaleFactor = _paddingScaleFactor(MediaQuery.textScalerOf(context).textScaleFactor);
     final TextDirection? textDirection = Directionality.maybeOf(context);
 
     Widget? iconWidget;
@@ -823,6 +886,71 @@ class AlertDialog extends StatelessWidget {
   }
 }
 
+class _AdaptiveAlertDialog extends AlertDialog {
+  const _AdaptiveAlertDialog({
+    super.key,
+    super.icon,
+    super.iconPadding,
+    super.iconColor,
+    super.title,
+    super.titlePadding,
+    super.titleTextStyle,
+    super.content,
+    super.contentPadding,
+    super.contentTextStyle,
+    super.actions,
+    super.actionsPadding,
+    super.actionsAlignment,
+    super.actionsOverflowAlignment,
+    super.actionsOverflowDirection,
+    super.actionsOverflowButtonSpacing,
+    super.buttonPadding,
+    super.backgroundColor,
+    super.elevation,
+    super.shadowColor,
+    super.surfaceTintColor,
+    super.semanticLabel,
+    super.insetPadding = _defaultInsetPadding,
+    super.clipBehavior = Clip.none,
+    super.shape,
+    super.alignment,
+    super.scrollable = false,
+    this.scrollController,
+    this.actionScrollController,
+    this.insetAnimationDuration = const Duration(milliseconds: 100),
+    this.insetAnimationCurve = Curves.decelerate,
+  });
+
+  final ScrollController? scrollController;
+  final ScrollController? actionScrollController;
+  final Duration insetAnimationDuration;
+  final Curve insetAnimationCurve;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    switch (theme.platform) {
+      case TargetPlatform.android:
+      case TargetPlatform.fuchsia:
+      case TargetPlatform.linux:
+      case TargetPlatform.windows:
+        break;
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        return CupertinoAlertDialog(
+          title: title,
+          content: content,
+          actions: actions ?? <Widget>[],
+          scrollController: scrollController,
+          actionScrollController: actionScrollController,
+          insetAnimationDuration: insetAnimationDuration,
+          insetAnimationCurve: insetAnimationCurve,
+        );
+    }
+    return super.build(context);
+  }
+}
+
 /// An option used in a [SimpleDialog].
 ///
 /// A simple dialog offers the user a choice between several options. This
@@ -968,8 +1096,6 @@ class SimpleDialog extends StatelessWidget {
   /// Creates a simple dialog.
   ///
   /// Typically used in conjunction with [showDialog].
-  ///
-  /// The [titlePadding] and [contentPadding] arguments must not be null.
   const SimpleDialog({
     super.key,
     this.title,
@@ -1087,7 +1213,7 @@ class SimpleDialog extends StatelessWidget {
 
     // The paddingScaleFactor is used to adjust the padding of Dialog
     // children.
-    final double paddingScaleFactor = _paddingScaleFactor(MediaQuery.textScaleFactorOf(context));
+    final double paddingScaleFactor = _paddingScaleFactor(MediaQuery.textScalerOf(context).textScaleFactor);
     final TextDirection? textDirection = Directionality.maybeOf(context);
 
     Widget? titleWidget;
@@ -1275,7 +1401,7 @@ Future<T?> showDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
   bool barrierDismissible = true,
-  Color? barrierColor = Colors.black54,
+  Color? barrierColor,
   String? barrierLabel,
   bool useSafeArea = true,
   bool useRootNavigator = true,
@@ -1297,7 +1423,7 @@ Future<T?> showDialog<T>({
   return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(DialogRoute<T>(
     context: context,
     builder: builder,
-    barrierColor: barrierColor,
+    barrierColor: barrierColor ?? Colors.black54,
     barrierDismissible: barrierDismissible,
     barrierLabel: barrierLabel,
     useSafeArea: useSafeArea,
@@ -1306,6 +1432,58 @@ Future<T?> showDialog<T>({
     anchorPoint: anchorPoint,
     traversalEdgeBehavior: traversalEdgeBehavior ?? TraversalEdgeBehavior.closedLoop,
   ));
+}
+
+/// Displays either a Material or Cupertino dialog depending on platform.
+///
+/// On most platforms this function will act the same as [showDialog], except
+/// for iOS and macOS, in which case it will act the same as
+/// [showCupertinoDialog].
+///
+/// On Cupertino platforms, [barrierColor], [useSafeArea], and
+/// [traversalEdgeBehavior] are ignored.
+Future<T?> showAdaptiveDialog<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool? barrierDismissible,
+  Color? barrierColor,
+  String? barrierLabel,
+  bool useSafeArea = true,
+  bool useRootNavigator = true,
+  RouteSettings? routeSettings,
+  Offset? anchorPoint,
+  TraversalEdgeBehavior? traversalEdgeBehavior,
+}) {
+  final ThemeData theme = Theme.of(context);
+  switch (theme.platform) {
+    case TargetPlatform.android:
+    case TargetPlatform.fuchsia:
+    case TargetPlatform.linux:
+    case TargetPlatform.windows:
+      return showDialog<T>(
+        context: context,
+        builder: builder,
+        barrierDismissible: barrierDismissible ?? true,
+        barrierColor: barrierColor,
+        barrierLabel: barrierLabel,
+        useSafeArea: useSafeArea,
+        useRootNavigator: useRootNavigator,
+        routeSettings: routeSettings,
+        anchorPoint: anchorPoint,
+        traversalEdgeBehavior: traversalEdgeBehavior,
+      );
+    case TargetPlatform.iOS:
+    case TargetPlatform.macOS:
+      return showCupertinoDialog<T>(
+        context: context,
+        builder: builder,
+        barrierDismissible: barrierDismissible ?? false,
+        barrierLabel: barrierLabel,
+        useRootNavigator: useRootNavigator,
+        anchorPoint: anchorPoint,
+        routeSettings: routeSettings,
+      );
+  }
 }
 
 bool _debugIsActive(BuildContext context) {
@@ -1447,8 +1625,6 @@ class _DialogDefaultsM2 extends DialogTheme {
 // Design token database by the script:
 //   dev/tools/gen_defaults/bin/gen_defaults.dart.
 
-// Token database version: v0_162
-
 class _DialogDefaultsM3 extends DialogTheme {
   _DialogDefaultsM3(this.context)
     : super(
@@ -1491,8 +1667,6 @@ class _DialogDefaultsM3 extends DialogTheme {
 // "END GENERATED" comments are generated from data in the Material
 // Design token database by the script:
 //   dev/tools/gen_defaults/bin/gen_defaults.dart.
-
-// Token database version: v0_162
 
 class _DialogFullscreenDefaultsM3 extends DialogTheme {
   const _DialogFullscreenDefaultsM3(this.context);

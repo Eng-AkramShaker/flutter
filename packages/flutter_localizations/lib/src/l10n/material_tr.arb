@@ -25,6 +25,7 @@
   "continueButtonLabel": "Devam",
   "copyButtonLabel": "Kopyala",
   "cutButtonLabel": "Kes",
+  "scanTextButtonLabel": "Metin tara",
   "okButtonLabel": "Tamam",
   "pasteButtonLabel": "Yapıştır",
   "selectAllButtonLabel": "Tümünü seç",
@@ -134,5 +135,15 @@
   "scrimLabel": "opaklık katmanı",
   "bottomSheetLabel": "alt sayfa",
   "scrimOnTapHint": "$modalRouteContentName içeriğini kapat",
-  "keyboardKeyShift": "üst karakter"
+  "keyboardKeyShift": "üst karakter",
+  "expansionTileExpandedHint": "daraltmak için iki kez dokunun",
+  "expansionTileCollapsedHint": "genişletmek için iki kez dokunun",
+  "expansionTileExpandedTapHint": "Daralt",
+  "expansionTileCollapsedTapHint": "Daha fazla ayrıntı için genişletin",
+  "expandedHint": "Daraltıldı",
+  "collapsedHint": "Genişletildi",
+  "menuDismissLabel": "Menüyü kapat",
+  "lookUpButtonLabel": "Look Up",
+  "searchWebButtonLabel": "Search Web",
+  "shareButtonLabel": "Share..."
 }

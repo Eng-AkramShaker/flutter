@@ -51,17 +51,20 @@ abstract class DoctorValidatorsProvider {
   // [FeatureFlags].
   factory DoctorValidatorsProvider.test({
     Platform? platform,
+    Logger? logger,
     required FeatureFlags featureFlags,
   }) {
     return _DefaultDoctorValidatorsProvider(
       featureFlags: featureFlags,
       platform: platform ?? FakePlatform(),
+      logger: logger ?? BufferLogger.test(),
     );
   }
   /// The singleton instance, pulled from the [AppContext].
   static DoctorValidatorsProvider get _instance => context.get<DoctorValidatorsProvider>()!;
 
   static final DoctorValidatorsProvider defaultInstance = _DefaultDoctorValidatorsProvider(
+    logger: globals.logger,
     platform: globals.platform,
     featureFlags: featureFlags,
   );
@@ -74,12 +77,14 @@ class _DefaultDoctorValidatorsProvider implements DoctorValidatorsProvider {
   _DefaultDoctorValidatorsProvider({
     required this.platform,
     required this.featureFlags,
-  });
+    required Logger logger,
+  }) : _logger = logger;
 
   List<DoctorValidator>? _validators;
   List<Workflow>? _workflows;
   final Platform platform;
   final FeatureFlags featureFlags;
+  final Logger _logger;
 
   late final LinuxWorkflow linuxWorkflow = LinuxWorkflow(
     platform: platform,
@@ -115,6 +120,7 @@ class _DefaultDoctorValidatorsProvider implements DoctorValidatorsProvider {
         userMessages: userMessages,
         plistParser: globals.plistParser,
         processManager: globals.processManager,
+        logger: _logger,
       ),
       ...VsCodeValidator.installedValidators(globals.fs, platform, globals.processManager),
     ];
@@ -123,7 +129,7 @@ class _DefaultDoctorValidatorsProvider implements DoctorValidatorsProvider {
       FlutterValidator(
         fileSystem: globals.fs,
         platform: globals.platform,
-        flutterVersion: () => globals.flutterVersion,
+        flutterVersion: () => globals.flutterVersion.fetchTagsAndGetVersion(clock: globals.systemClock),
         devToolsVersion: () => globals.cache.devToolsVersion,
         processManager: globals.processManager,
         userMessages: userMessages,
@@ -138,7 +144,14 @@ class _DefaultDoctorValidatorsProvider implements DoctorValidatorsProvider {
       if (androidWorkflow!.appliesToHostPlatform)
         GroupedValidator(<DoctorValidator>[androidValidator!, androidLicenseValidator!]),
       if (globals.iosWorkflow!.appliesToHostPlatform || macOSWorkflow.appliesToHostPlatform)
-        GroupedValidator(<DoctorValidator>[XcodeValidator(xcode: globals.xcode!, userMessages: userMessages), globals.cocoapodsValidator!]),
+        GroupedValidator(<DoctorValidator>[
+          XcodeValidator(
+            xcode: globals.xcode!,
+            userMessages: userMessages,
+            iosSimulatorUtils: globals.iosSimulatorUtils!,
+          ),
+          globals.cocoapodsValidator!,
+        ]),
       if (webWorkflow.appliesToHostPlatform)
         ChromeValidator(
           chromiumLauncher: ChromiumLauncher(
@@ -410,7 +423,7 @@ class Doctor {
       }
 
       for (final ValidationMessage message in result.messages) {
-        if (!message.isInformation || verbose == true) {
+        if (!message.isInformation || verbose) {
           int hangingIndent = 2;
           int indent = 4;
           final String indicator = showColor ? message.coloredIndicator : message.indicator;
@@ -577,14 +590,14 @@ class FlutterValidator extends DoctorValidator {
   ValidationMessage _getFlutterVersionMessage(String frameworkVersion, String versionChannel, String flutterRoot) {
     String flutterVersionMessage = _userMessages.flutterVersion(frameworkVersion, versionChannel, flutterRoot);
 
-    // The tool sets the channel as "unknown", if the current branch is on a
-    // "detached HEAD" state or doesn't have an upstream, and sets the
-    // frameworkVersion as "0.0.0-unknown" if  "git describe" on HEAD doesn't
-    // produce an expected format to be parsed for the frameworkVersion.
-    if (versionChannel != 'unknown' && frameworkVersion != '0.0.0-unknown') {
+    // The tool sets the channel as kUserBranch, if the current branch is on a
+    // "detached HEAD" state, doesn't have an upstream, or is on a user branch,
+    // and sets the frameworkVersion as "0.0.0-unknown" if "git describe" on
+    // HEAD doesn't produce an expected format to be parsed for the frameworkVersion.
+    if (versionChannel != kUserBranch && frameworkVersion != '0.0.0-unknown') {
       return ValidationMessage(flutterVersionMessage);
     }
-    if (versionChannel == 'unknown') {
+    if (versionChannel == kUserBranch) {
       flutterVersionMessage = '$flutterVersionMessage\n${_userMessages.flutterUnknownChannel}';
     }
     if (frameworkVersion == '0.0.0-unknown') {

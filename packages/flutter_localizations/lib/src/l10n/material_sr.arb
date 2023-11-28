@@ -28,6 +28,7 @@
   "continueButtonLabel": "Настави",
   "copyButtonLabel": "Копирај",
   "cutButtonLabel": "Исеци",
+  "scanTextButtonLabel": "Скенирај текст",
   "okButtonLabel": "Потврди",
   "pasteButtonLabel": "Налепи",
   "selectAllButtonLabel": "Изабери све",
@@ -137,5 +138,15 @@
   "scrimLabel": "Скрим",
   "bottomSheetLabel": "Доња табела",
   "scrimOnTapHint": "Затвори: $modalRouteContentName",
-  "keyboardKeyShift": "Shift"
+  "keyboardKeyShift": "Shift",
+  "expansionTileExpandedHint": "двапут додирните да бисте скупили",
+  "expansionTileCollapsedHint": "двапут додирните да бисте проширили",
+  "expansionTileExpandedTapHint": "Скупите",
+  "expansionTileCollapsedTapHint": "Проширите за још детаља",
+  "expandedHint": "Скупљено је",
+  "collapsedHint": "Проширено је",
+  "menuDismissLabel": "Одбаците мени",
+  "lookUpButtonLabel": "Look Up",
+  "searchWebButtonLabel": "Search Web",
+  "shareButtonLabel": "Share..."
 }

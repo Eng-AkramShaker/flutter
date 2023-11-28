@@ -22,5 +22,13 @@
   "tabSemanticsLabel": "Thẻ $tabIndex/$tabCount",
   "modalBarrierDismissLabel": "Bỏ qua",
   "searchTextFieldPlaceholderLabel": "Tìm kiếm",
+<<<<<<< HEAD
   "noSpellCheckReplacementsLabel": "No Replacements Found"
+=======
+  "noSpellCheckReplacementsLabel": "Không tìm thấy phương án thay thế",
+  "menuDismissLabel": "Đóng trình đơn",
+  "lookUpButtonLabel": "Look Up",
+  "searchWebButtonLabel": "Search Web",
+  "shareButtonLabel": "Share..."
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 }

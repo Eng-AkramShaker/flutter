@@ -10,6 +10,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 
 void main() {
   late FakeBuilder mockHelper;
@@ -34,7 +35,7 @@ void main() {
   }
 
   void uiTestGroup() {
-    testWidgets("doesn't invoke anything without user interaction", (WidgetTester tester) async {
+    testWidgetsWithLeakTracking("doesn't invoke anything without user interaction", (WidgetTester tester) async {
       await tester.pumpWidget(
         CupertinoApp(
           home: CustomScrollView(
@@ -56,7 +57,7 @@ void main() {
       );
     }, variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }));
 
-    testWidgets('calls the indicator builder when starting to overscroll', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('calls the indicator builder when starting to overscroll', (WidgetTester tester) async {
       await tester.pumpWidget(
         CupertinoApp(
           home: CustomScrollView(
@@ -90,7 +91,7 @@ void main() {
       );
     }, variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }));
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       "don't call the builder if overscroll doesn't move slivers like on Android",
       (WidgetTester tester) async {
         await tester.pumpWidget(
@@ -124,7 +125,7 @@ void main() {
       variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
 
-    testWidgets('let the builder update as canceled drag scrolls away', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('let the builder update as canceled drag scrolls away', (WidgetTester tester) async {
       await tester.pumpWidget(
         CupertinoApp(
           home: CustomScrollView(
@@ -186,7 +187,7 @@ void main() {
       );
     }, variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }));
 
-    testWidgets('drag past threshold triggers refresh task', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('drag past threshold triggers refresh task', (WidgetTester tester) async {
       final List<MethodCall> platformCallLog = <MethodCall>[];
 
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (MethodCall methodCall) async {
@@ -247,7 +248,7 @@ void main() {
         ),
         if (debugDefaultTargetPlatformOverride == TargetPlatform.macOS) matchesBuilder(
           refreshState: RefreshIndicatorMode.armed,
-          pulledExtent: moreOrLessEquals(100.44528),
+          pulledExtent: moreOrLessEquals(112.51104),
           refreshTriggerPullDistance: 100,  // default value.
           refreshIndicatorExtent: 60,  // default value.
         )
@@ -268,7 +269,7 @@ void main() {
       );
     }, variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }));
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'refreshing task keeps the sliver expanded forever until done',
       (WidgetTester tester) async {
         await tester.pumpWidget(
@@ -343,7 +344,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'refreshing task keeps the sliver expanded forever until completes with error',
       (WidgetTester tester) async {
         final FlutterError error = FlutterError('Oops');
@@ -431,7 +432,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets('expanded refreshing sliver scrolls normally', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('expanded refreshing sliver scrolls normally', (WidgetTester tester) async {
       mockHelper.refreshIndicator = const Center(child: Text('-1'));
 
       await tester.pumpWidget(
@@ -464,12 +465,7 @@ void main() {
         const Rect.fromLTRB(0.0, 0.0, 800.0, 150.0),
       );
 
-      if (debugDefaultTargetPlatformOverride == TargetPlatform.macOS) {
-        await tester.drag(find.text('0'), const Offset(0.0, -130.0), touchSlopY: 0, warnIfMissed: false); // hits the list
-      }
-      else {
-        await tester.drag(find.text('0'), const Offset(0.0, -300.0), touchSlopY: 0, warnIfMissed: false); // hits the list
-      }
+      await tester.drag(find.text('0'), const Offset(0.0, -300.0), touchSlopY: 0, warnIfMissed: false); // hits the list
       await tester.pump();
 
       // Refresh indicator still being told to layout the same way.
@@ -484,15 +480,15 @@ void main() {
       if (debugDefaultTargetPlatformOverride == TargetPlatform.macOS) {
         expect(
           tester.getTopLeft(find.widgetWithText(Center, '-1', skipOffstage: false)).dy,
-          moreOrLessEquals(-40),
+          moreOrLessEquals(-210.0),
         );
         expect(
           tester.getBottomLeft(find.widgetWithText(Center, '-1', skipOffstage: false)).dy,
-          moreOrLessEquals(20),
+          moreOrLessEquals(-150.0),
         );
         expect(
           tester.getTopLeft(find.widgetWithText(Center, '0')).dy,
-          moreOrLessEquals(20),
+          moreOrLessEquals(-150.0),
         );
       }
       else {
@@ -525,7 +521,7 @@ void main() {
       );
     }, variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }));
 
-    testWidgets('expanded refreshing sliver goes away when done', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('expanded refreshing sliver goes away when done', (WidgetTester tester) async {
       mockHelper.refreshIndicator = const Center(child: Text('-1'));
 
       await tester.pumpWidget(
@@ -593,7 +589,7 @@ void main() {
       );
     }, variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }));
 
-    testWidgets('builder still called when sliver snapped back more than 90%', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('builder still called when sliver snapped back more than 90%', (WidgetTester tester) async {
       mockHelper.refreshIndicator = const Center(child: Text('-1'));
 
       await tester.pumpWidget(
@@ -691,7 +687,7 @@ void main() {
       expect(find.text('-1'), findsOneWidget);
     }, variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }));
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'retracting sliver during done cannot be pulled to refresh again until fully retracted',
       (WidgetTester tester) async {
         mockHelper.refreshIndicator = const Center(child: Text('-1'));
@@ -761,7 +757,7 @@ void main() {
         if (debugDefaultTargetPlatformOverride == TargetPlatform.macOS) {
           expect(mockHelper.invocations, contains(matchesBuilder(
             refreshState: RefreshIndicatorMode.done,
-            pulledExtent: 97.71721346565732,
+            pulledExtent: 118.29756539042118,
             refreshTriggerPullDistance: 100,  // default value.
             refreshIndicatorExtent: 60,  // default value.
           )));
@@ -796,7 +792,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'sliver held in overscroll when task finishes completes normally',
       (WidgetTester tester) async {
         mockHelper.refreshIndicator = const Center(child: Text('-1'));
@@ -848,7 +844,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'sliver scrolled away when task completes properly removes itself',
       (WidgetTester tester) async {
         if (testListLength < 4) {
@@ -934,7 +930,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       "don't do anything unless it can be overscrolled at the start of the list",
       (WidgetTester tester) async {
         mockHelper.refreshIndicator = const Center(child: Text('-1'));
@@ -962,7 +958,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'without an onRefresh, builder is called with arm for one frame then sliver goes away',
       (WidgetTester tester) async {
         mockHelper.refreshIndicator = const Center(child: Text('-1'));
@@ -1019,7 +1015,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets('Should not crash when dragged', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('Should not crash when dragged', (WidgetTester tester) async {
       await tester.pumpWidget(
         CupertinoApp(
           home: CustomScrollView(
@@ -1044,7 +1040,7 @@ void main() {
 
     // Test to make sure the refresh sliver's overscroll isn't eaten by the
     // nav bar sliver https://github.com/flutter/flutter/issues/74516.
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'properly displays when the refresh sliver is behind the large title nav bar sliver',
       (WidgetTester tester) async {
         await tester.pumpWidget(
@@ -1087,7 +1083,7 @@ void main() {
   }
 
   void stateMachineTestGroup() {
-    testWidgets('starts in inactive state', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('starts in inactive state', (WidgetTester tester) async {
       await tester.pumpWidget(
         CupertinoApp(
           home: CustomScrollView(
@@ -1107,7 +1103,7 @@ void main() {
       );
     }, variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }));
 
-    testWidgets('goes to drag and returns to inactive in a small drag', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('goes to drag and returns to inactive in a small drag', (WidgetTester tester) async {
       await tester.pumpWidget(
         CupertinoApp(
           home: CustomScrollView(
@@ -1137,7 +1133,7 @@ void main() {
       );
     }, variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }));
 
-    testWidgets('goes to armed the frame it passes the threshold', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('goes to armed the frame it passes the threshold', (WidgetTester tester) async {
       await tester.pumpWidget(
         CupertinoApp(
           home: CustomScrollView(
@@ -1172,7 +1168,7 @@ void main() {
       );
     }, variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }));
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'goes to refresh the frame it crossed back the refresh threshold',
       (WidgetTester tester) async {
         await tester.pumpWidget(
@@ -1199,17 +1195,12 @@ void main() {
           RefreshIndicatorMode.armed,
         );
 
-        if (debugDefaultTargetPlatformOverride == TargetPlatform.macOS) {
-          await gesture.moveBy(const Offset(0.0, -41.0)); // Overscrolling, need to move more than -40.
-        }
-        else {
-          await gesture.moveBy(const Offset(0.0, -80.0)); // Overscrolling, need to move more than -40.
-        }
+        await gesture.moveBy(const Offset(0.0, -80.0)); // Overscrolling, need to move more than -40.
         await tester.pump();
         if (debugDefaultTargetPlatformOverride == TargetPlatform.macOS) {
           expect(
             tester.getTopLeft(find.widgetWithText(SizedBox, '0')).dy,
-            moreOrLessEquals(49), // Below 50 now.
+            moreOrLessEquals(10.0), // Below 50 now.
           );
         }
         else {
@@ -1226,7 +1217,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'goes to done internally as soon as the task finishes',
       (WidgetTester tester) async {
         await tester.pumpWidget(
@@ -1274,7 +1265,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'goes back to inactive when retracting back past 10% of arming distance',
       (WidgetTester tester) async {
         await tester.pumpWidget(
@@ -1317,7 +1308,7 @@ void main() {
         if (debugDefaultTargetPlatformOverride == TargetPlatform.macOS) {
           expect(
             tester.getTopLeft(find.widgetWithText(SizedBox, '0')).dy,
-            moreOrLessEquals(25),
+            moreOrLessEquals(25.0),
           );
         }
         else {
@@ -1333,7 +1324,7 @@ void main() {
         );
 
         if (debugDefaultTargetPlatformOverride == TargetPlatform.macOS) {
-          await gesture.moveBy(const Offset(0.0, -15.0));
+          await gesture.moveBy(const Offset(0.0, -16.0));
         }
         else {
           await gesture.moveBy(const Offset(0.0, -35.0));
@@ -1342,7 +1333,7 @@ void main() {
         if (debugDefaultTargetPlatformOverride == TargetPlatform.macOS) {
           expect(
             tester.getTopLeft(find.widgetWithText(SizedBox, '0')).dy,
-            moreOrLessEquals(10),
+            moreOrLessEquals(9.0),
           );
         }
         else {
@@ -1359,7 +1350,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       'goes back to inactive if already scrolled away when task completes',
       (WidgetTester tester) async {
         await tester.pumpWidget(
@@ -1423,7 +1414,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets(
+    testWidgetsWithLeakTracking(
       "don't have to build any indicators or occupy space during refresh",
       (WidgetTester tester) async {
         mockHelper.refreshIndicator = const Center(child: Text('-1'));
@@ -1473,7 +1464,7 @@ void main() {
       variant: const TargetPlatformVariant(<TargetPlatform>{ TargetPlatform.iOS,  TargetPlatform.macOS }),
     );
 
-    testWidgets('buildRefreshIndicator progress', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('buildRefreshIndicator progress', (WidgetTester tester) async {
       await tester.pumpWidget(
         CupertinoApp(
           home: Builder(
@@ -1520,7 +1511,7 @@ void main() {
       expect(tester.widget<CupertinoActivityIndicator>(find.byType(CupertinoActivityIndicator)).progress, 100.0 / 100.0);
     });
 
-    testWidgets('indicator should not become larger when overscrolled', (WidgetTester tester) async {
+    testWidgetsWithLeakTracking('indicator should not become larger when overscrolled', (WidgetTester tester) async {
       // test for https://github.com/flutter/flutter/issues/79841
       await tester.pumpWidget(
         Directionality(
@@ -1556,7 +1547,7 @@ void main() {
   // correct by coincidence.
   group('state machine test short list', stateMachineTestGroup);
 
-  testWidgets(
+  testWidgetsWithLeakTracking(
     'Does not crash when paintExtent > remainingPaintExtent',
     (WidgetTester tester) async {
       // Regression test for https://github.com/flutter/flutter/issues/46871.

@@ -26,6 +26,7 @@ import '../resident_runner.dart';
 import '../run_cold.dart';
 import '../run_hot.dart';
 import '../runner/flutter_command.dart';
+import '../runner/flutter_command_runner.dart';
 import '../tracing.dart';
 import '../vmservice.dart';
 import '../web/web_runner.dart';
@@ -144,16 +145,20 @@ abstract class RunCommandBase extends FlutterCommand with DeviceBasedDevelopment
       )
       ..addFlag('enable-software-rendering',
         negatable: false,
-        help: 'Enable rendering using the Skia software backend. '
+        help: '(deprecated) Enable rendering using the Skia software backend. '
             'This is useful when testing Flutter on emulators. By default, '
             'Flutter will attempt to either use OpenGL or Vulkan and fall back '
-            'to software when neither is available.',
+            'to software when neither is available. This option is not supported '
+            'when using the Impeller rendering engine.',
+        hide: !verboseHelp,
       )
       ..addFlag('skia-deterministic-rendering',
         negatable: false,
-        help: 'When combined with "--enable-software-rendering", this should provide completely '
+        help: '(deprecated) When combined with "--enable-software-rendering", this should provide completely '
             'deterministic (i.e. reproducible) Skia rendering. This is useful for testing purposes '
-            '(e.g. when comparing screenshots).',
+            '(e.g. when comparing screenshots). This option is not supported '
+            'when using the Impeller rendering engine.',
+        hide: !verboseHelp,
       )
       ..addMultiOption('dart-entrypoint-args',
         abbr: 'a',
@@ -247,6 +252,7 @@ abstract class RunCommandBase extends FlutterCommand with DeviceBasedDevelopment
         uninstallFirst: uninstallFirst,
         enableDartProfiling: enableDartProfiling,
         enableEmbedderApi: enableEmbedderApi,
+        usingCISystem: usingCISystem,
       );
     } else {
       return DebuggingOptions.enabled(
@@ -298,6 +304,7 @@ abstract class RunCommandBase extends FlutterCommand with DeviceBasedDevelopment
         serveObservatory: boolArg('serve-observatory'),
         enableDartProfiling: enableDartProfiling,
         enableEmbedderApi: enableEmbedderApi,
+        usingCISystem: usingCISystem,
       );
     }
   }
@@ -308,6 +315,7 @@ class RunCommand extends RunCommandBase {
     requiresPubspecYaml();
     usesFilesystemOptions(hide: !verboseHelp);
     usesExtraDartFlagOptions(verboseHelp: verboseHelp);
+    usesFrontendServerStarterPathOption(verboseHelp: verboseHelp);
     addEnableExperimentation(hide: !verboseHelp);
     usesInitializeFromDillOption(hide: !verboseHelp);
 
@@ -427,7 +435,7 @@ class RunCommand extends RunCommandBase {
     bool isEmulator;
     bool anyAndroidDevices = false;
     bool anyIOSDevices = false;
-    bool anyIOSNetworkDevices = false;
+    bool anyWirelessIOSDevices = false;
 
     if (devices == null || devices!.isEmpty) {
       deviceType = 'none';
@@ -439,7 +447,7 @@ class RunCommand extends RunCommandBase {
       anyAndroidDevices = platform == TargetPlatform.android;
       anyIOSDevices = platform == TargetPlatform.ios;
       if (device is IOSDevice && device.isWirelesslyConnected) {
-        anyIOSNetworkDevices = true;
+        anyWirelessIOSDevices = true;
       }
       deviceType = getNameForTargetPlatform(platform);
       deviceOsVersion = await device.sdkNameAndVersion;
@@ -453,7 +461,7 @@ class RunCommand extends RunCommandBase {
         anyAndroidDevices = anyAndroidDevices || (platform == TargetPlatform.android);
         anyIOSDevices = anyIOSDevices || (platform == TargetPlatform.ios);
         if (device is IOSDevice && device.isWirelesslyConnected) {
-          anyIOSNetworkDevices = true;
+          anyWirelessIOSDevices = true;
         }
         if (anyAndroidDevices && anyIOSDevices) {
           break;
@@ -463,7 +471,7 @@ class RunCommand extends RunCommandBase {
 
     String? iOSInterfaceType;
     if (anyIOSDevices) {
-      iOSInterfaceType = anyIOSNetworkDevices ? 'wireless' : 'usb';
+      iOSInterfaceType = anyWirelessIOSDevices ? 'wireless' : 'usb';
     }
 
     String? androidEmbeddingVersion;
@@ -643,7 +651,7 @@ class RunCommand extends RunCommandBase {
               : globals.fs.file(applicationBinaryPath),
           trackWidgetCreation: trackWidgetCreation,
           projectRootPath: stringArg('project-root'),
-          packagesFilePath: globalResults!['packages'] as String?,
+          packagesFilePath: globalResults![FlutterGlobalOptions.kPackagesOption] as String?,
           dillOutputPath: stringArg('output-dill'),
           ipv6: ipv6 ?? false,
           multidexEnabled: boolArg('multidex'),
@@ -677,19 +685,6 @@ class RunCommand extends RunCommandBase {
       if (hotMode) {
         if (!device.supportsHotReload) {
           throwToolExit('Hot reload is not supported by ${device.name}. Run with "--no-hot".');
-        }
-      }
-      if (await device.isLocalEmulator && await device.supportsHardwareRendering) {
-        if (boolArg('enable-software-rendering')) {
-          globals.printStatus(
-            'Using software rendering with device ${device.name}. You may get better performance '
-            'with hardware mode by configuring hardware rendering for your device.'
-           );
-        } else {
-          globals.printStatus(
-            'Using hardware rendering with device ${device.name}. If you notice graphics artifacts, '
-            'consider enabling software rendering with "--enable-software-rendering".'
-          );
         }
       }
     }
@@ -774,7 +769,7 @@ class RunCommand extends RunCommandBase {
       ExitStatus.success,
       timingLabelParts: <String?>[
         if (hotMode) 'hot' else 'cold',
-        getModeName(getBuildMode()),
+        getBuildMode().cliName,
         if (devices!.length == 1)
           getNameForTargetPlatform(await devices![0].targetPlatform)
         else

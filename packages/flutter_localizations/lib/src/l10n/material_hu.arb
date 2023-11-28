@@ -25,6 +25,7 @@
   "continueButtonLabel": "Folytatás",
   "copyButtonLabel": "Másolás",
   "cutButtonLabel": "Kivágás",
+  "scanTextButtonLabel": "Szöveg beolvasása",
   "okButtonLabel": "OK",
   "pasteButtonLabel": "Beillesztés",
   "selectAllButtonLabel": "Összes kijelölése",
@@ -134,5 +135,15 @@
   "scrimLabel": "Borítás",
   "bottomSheetLabel": "Alsó lap",
   "scrimOnTapHint": "$modalRouteContentName bezárása",
-  "keyboardKeyShift": "Shift"
+  "keyboardKeyShift": "Shift",
+  "expansionTileExpandedHint": "duplán koppintva összecsukhatja",
+  "expansionTileCollapsedHint": "duplán koppintva kibonthatja",
+  "expansionTileExpandedTapHint": "Összecsukás",
+  "expansionTileCollapsedTapHint": "Bontsa ki a további részletek megtekintéséhez",
+  "expandedHint": "Összecsukva",
+  "collapsedHint": "Kibontva",
+  "menuDismissLabel": "Menü bezárása",
+  "lookUpButtonLabel": "Felfelé nézés",
+  "searchWebButtonLabel": "Search Web",
+  "shareButtonLabel": "Share..."
 }
