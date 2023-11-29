@@ -22,5 +22,13 @@
   "tabSemanticsLabel": "Раздел $tabIndex от $tabCount",
   "modalBarrierDismissLabel": "Отхвърляне",
   "searchTextFieldPlaceholderLabel": "Търсене",
+<<<<<<< HEAD
   "noSpellCheckReplacementsLabel": "No Replacements Found"
+=======
+  "noSpellCheckReplacementsLabel": "Не бяха намерени замествания",
+  "menuDismissLabel": "Отхвърляне на менюто",
+  "lookUpButtonLabel": "Look Up",
+  "searchWebButtonLabel": "Search Web",
+  "shareButtonLabel": "Share..."
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 }

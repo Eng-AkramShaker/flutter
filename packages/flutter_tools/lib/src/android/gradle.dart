@@ -34,6 +34,7 @@ import 'android_sdk.dart';
 import 'android_studio.dart';
 import 'gradle_errors.dart';
 import 'gradle_utils.dart';
+<<<<<<< HEAD
 import 'migrations/android_studio_java_gradle_conflict_migration.dart';
 import 'migrations/top_level_gradle_build_file_migration.dart';
 import 'multidex.dart';
@@ -41,6 +42,17 @@ import 'multidex.dart';
 /// The regex to grab variant names from printVariants gradle task
 ///
 /// The task is defined in flutter/packages/flutter_tools/gradle/flutter.gradle.
+=======
+import 'java.dart';
+import 'migrations/android_studio_java_gradle_conflict_migration.dart';
+import 'migrations/min_sdk_version_migration.dart';
+import 'migrations/top_level_gradle_build_file_migration.dart';
+import 'multidex.dart';
+
+/// The regex to grab variant names from printBuildVariants gradle task
+///
+/// The task is defined in flutter/packages/flutter_tools/gradle/src/main/groovy/flutter.groovy
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 ///
 /// The expected output from the task should be similar to:
 ///
@@ -49,6 +61,14 @@ import 'multidex.dart';
 /// BuildVariant: profile
 final RegExp _kBuildVariantRegex = RegExp('^BuildVariant: (?<$_kBuildVariantRegexGroupName>.*)\$');
 const String _kBuildVariantRegexGroupName = 'variant';
+<<<<<<< HEAD
+=======
+const String _kBuildVariantTaskName = 'printBuildVariants';
+
+String _getOutputAppLinkSettingsTaskFor(String buildVariant) {
+  return _taskForBuildVariant('output', buildVariant, 'AppLinkSettings');
+}
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 
 /// The directory where the APK artifact is generated.
 Directory getApkDirectory(FlutterProject project) {
@@ -89,8 +109,13 @@ Directory getRepoDirectory(Directory buildDirectory) {
 String _taskFor(String prefix, BuildInfo buildInfo) {
   final String buildType = camelCase(buildInfo.modeName);
   final String productFlavor = buildInfo.flavor ?? '';
-  return '$prefix${sentenceCase(productFlavor)}${sentenceCase(buildType)}';
+  return _taskForBuildVariant(prefix, '$productFlavor${sentenceCase(buildType)}');
 }
+
+String _taskForBuildVariant(String prefix, String buildVariant, [String suffix = '']) {
+  return '$prefix${sentenceCase(buildVariant)}$suffix';
+}
+
 
 /// Returns the task to build an APK.
 @visibleForTesting
@@ -119,7 +144,7 @@ Iterable<String> _apkFilesFor(AndroidBuildInfo androidBuildInfo) {
   final String flavorString = productFlavor.isEmpty ? '' : '-$productFlavor';
   if (androidBuildInfo.splitPerAbi) {
     return androidBuildInfo.targetArchs.map<String>((AndroidArch arch) {
-      final String abi = getNameForAndroidArch(arch);
+      final String abi = arch.archName;
       return 'app$flavorString-$abi-$buildType.apk';
     });
   }
@@ -132,6 +157,7 @@ const Duration kMaxRetryTime = Duration(seconds: 10);
 /// An implementation of the [AndroidBuilder] that delegates to gradle.
 class AndroidGradleBuilder implements AndroidBuilder {
   AndroidGradleBuilder({
+    required Java? java,
     required Logger logger,
     required ProcessManager processManager,
     required FileSystem fileSystem,
@@ -140,7 +166,12 @@ class AndroidGradleBuilder implements AndroidBuilder {
     required GradleUtils gradleUtils,
     required Platform platform,
     required AndroidStudio? androidStudio,
+<<<<<<< HEAD
   }) : _logger = logger,
+=======
+  }) : _java = java,
+       _logger = logger,
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
        _fileSystem = fileSystem,
        _artifacts = artifacts,
        _usage = usage,
@@ -150,6 +181,7 @@ class AndroidGradleBuilder implements AndroidBuilder {
        _processUtils = ProcessUtils(logger: logger, processManager: processManager),
        _platform = platform;
 
+  final Java? _java;
   final Logger _logger;
   final ProcessUtils _processUtils;
   final FileSystem _fileSystem;
@@ -158,7 +190,10 @@ class AndroidGradleBuilder implements AndroidBuilder {
   final GradleUtils _gradleUtils;
   final FileSystemUtils _fileSystemUtils;
   final AndroidStudio? _androidStudio;
+<<<<<<< HEAD
   final Platform _platform;
+=======
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 
   /// Builds the AAR and POM files for the current Flutter module or plugin.
   @override
@@ -212,6 +247,7 @@ class AndroidGradleBuilder implements AndroidBuilder {
       isBuildingBundle: false,
       localGradleErrors: gradleErrors,
       configOnly: configOnly,
+      maxRetries: 1,
     );
   }
 
@@ -234,7 +270,36 @@ class AndroidGradleBuilder implements AndroidBuilder {
       validateDeferredComponents: validateDeferredComponents,
       deferredComponentsEnabled: deferredComponentsEnabled,
       configOnly: configOnly,
+      maxRetries: 1,
     );
+  }
+
+  Future<RunResult> _runGradleTask(
+    String taskName, {
+    List<String> options = const <String>[],
+    required FlutterProject project
+  }) async {
+    final Status status = _logger.startProgress(
+      "Running Gradle task '$taskName'...",
+    );
+    final List<String> command = <String>[
+      _gradleUtils.getExecutable(project),
+      ...options, // suppresses gradle output.
+      taskName,
+    ];
+
+    RunResult result;
+    try {
+      result = await _processUtils.run(
+        command,
+        workingDirectory: project.android.hostAppGradleRoot.path,
+        allowReentrantFlutter: true,
+        environment: _java?.environment,
+      );
+    } finally {
+      status.stop();
+    }
+    return result;
   }
 
   /// Builds an app.
@@ -266,12 +331,17 @@ class AndroidGradleBuilder implements AndroidBuilder {
       AndroidStudioJavaGradleConflictMigration(_logger,
           project: project.android,
           androidStudio: _androidStudio,
+<<<<<<< HEAD
           fileSystem: _fileSystem,
           processUtils: _processUtils,
           platform: _platform,
           os: globals.os,
           androidSdk: globals.androidSdk)
       ,
+=======
+          java: globals.java),
+      MinSdkVersionMigration(project.android, _logger),
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
     ];
 
     final ProjectMigration migration = ProjectMigration(migrators);
@@ -329,23 +399,24 @@ class AndroidGradleBuilder implements AndroidBuilder {
     final LocalEngineInfo? localEngineInfo = _artifacts.localEngineInfo;
     if (localEngineInfo != null) {
       final Directory localEngineRepo = _getLocalEngineRepo(
-        engineOutPath: localEngineInfo.engineOutPath,
+        engineOutPath: localEngineInfo.targetOutPath,
         androidBuildInfo: androidBuildInfo,
         fileSystem: _fileSystem,
       );
       _logger.printTrace(
-          'Using local engine: ${localEngineInfo.engineOutPath}\n'
+          'Using local engine: ${localEngineInfo.targetOutPath}\n'
               'Local Maven repo: ${localEngineRepo.path}'
       );
       command.add('-Plocal-engine-repo=${localEngineRepo.path}');
       command.add('-Plocal-engine-build-mode=${buildInfo.modeName}');
-      command.add('-Plocal-engine-out=${localEngineInfo.engineOutPath}');
+      command.add('-Plocal-engine-out=${localEngineInfo.targetOutPath}');
+      command.add('-Plocal-engine-host-out=${localEngineInfo.hostOutPath}');
       command.add('-Ptarget-platform=${_getTargetPlatformByLocalEnginePath(
-          localEngineInfo.engineOutPath)}');
+          localEngineInfo.targetOutPath)}');
     } else if (androidBuildInfo.targetArchs.isNotEmpty) {
       final String targetPlatforms = androidBuildInfo
           .targetArchs
-          .map(getPlatformNameForAndroidArch).join(',');
+          .map((AndroidArch e) => e.platformName).join(',');
       command.add('-Ptarget-platform=$targetPlatforms');
     }
     command.add('-Ptarget=$target');
@@ -431,10 +502,14 @@ class AndroidGradleBuilder implements AndroidBuilder {
         command,
         workingDirectory: project.android.hostAppGradleRoot.path,
         allowReentrantFlutter: true,
+<<<<<<< HEAD
         environment: <String, String>{
           if (javaHome != null)
             AndroidSdk.javaHomeEnvironmentVariable: javaHome,
         },
+=======
+        environment: _java?.environment,
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
         mapFunction: consumeLog,
       );
     } on ProcessException catch (exception) {
@@ -558,7 +633,7 @@ class AndroidGradleBuilder implements AndroidBuilder {
       logger: _logger,
       flutterUsage: _usage,
     );
-    final String archName = getNameForAndroidArch(androidBuildInfo.targetArchs.single);
+    final String archName = androidBuildInfo.targetArchs.single.archName;
     final BuildInfo buildInfo = androidBuildInfo.buildInfo;
     final File aotSnapshot = _fileSystem.directory(buildInfo.codeSizeDirectory)
         .childFile('snapshot.$archName.json');
@@ -658,17 +733,18 @@ class AndroidGradleBuilder implements AndroidBuilder {
     final LocalEngineInfo? localEngineInfo = _artifacts.localEngineInfo;
     if (localEngineInfo != null) {
       final Directory localEngineRepo = _getLocalEngineRepo(
-        engineOutPath: localEngineInfo.engineOutPath,
+        engineOutPath: localEngineInfo.targetOutPath,
         androidBuildInfo: androidBuildInfo,
         fileSystem: _fileSystem,
       );
       _logger.printTrace(
-        'Using local engine: ${localEngineInfo.engineOutPath}\n'
+        'Using local engine: ${localEngineInfo.targetOutPath}\n'
         'Local Maven repo: ${localEngineRepo.path}'
       );
       command.add('-Plocal-engine-repo=${localEngineRepo.path}');
       command.add('-Plocal-engine-build-mode=${buildInfo.modeName}');
-      command.add('-Plocal-engine-out=${localEngineInfo.engineOutPath}');
+      command.add('-Plocal-engine-out=${localEngineInfo.targetOutPath}');
+      command.add('-Plocal-engine-host-out=${localEngineInfo.hostOutPath}');
 
       // Copy the local engine repo in the output directory.
       try {
@@ -683,10 +759,10 @@ class AndroidGradleBuilder implements AndroidBuilder {
         );
       }
       command.add('-Ptarget-platform=${_getTargetPlatformByLocalEnginePath(
-          localEngineInfo.engineOutPath)}');
+          localEngineInfo.targetOutPath)}');
     } else if (androidBuildInfo.targetArchs.isNotEmpty) {
       final String targetPlatforms = androidBuildInfo.targetArchs
-          .map(getPlatformNameForAndroidArch).join(',');
+          .map((AndroidArch e) => e.platformName).join(',');
       command.add('-Ptarget-platform=$targetPlatforms');
     }
 
@@ -701,10 +777,14 @@ class AndroidGradleBuilder implements AndroidBuilder {
         command,
         workingDirectory: project.android.hostAppGradleRoot.path,
         allowReentrantFlutter: true,
+<<<<<<< HEAD
         environment: <String, String>{
           if (javaHome != null)
             AndroidSdk.javaHomeEnvironmentVariable: javaHome,
         },
+=======
+        environment: _java?.environment,
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
       );
     } finally {
       status.stop();
@@ -736,6 +816,7 @@ class AndroidGradleBuilder implements AndroidBuilder {
 
   @override
   Future<List<String>> getBuildVariants({required FlutterProject project}) async {
+<<<<<<< HEAD
     final Status status = _logger.startProgress(
       "Running Gradle task 'printBuildVariants'...",
     );
@@ -762,6 +843,16 @@ class AndroidGradleBuilder implements AndroidBuilder {
     } finally {
       status.stop();
     }
+=======
+    final Stopwatch sw = Stopwatch()
+      ..start();
+    final RunResult result = await _runGradleTask(
+      _kBuildVariantTaskName,
+      options: const <String>['-q'],
+      project: project,
+    );
+
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
     _usage.sendTiming('print', 'android build variants', sw.elapsed);
 
     if (result.exitCode != 0) {
@@ -778,6 +869,30 @@ class AndroidGradleBuilder implements AndroidBuilder {
     }
     return options;
   }
+<<<<<<< HEAD
+=======
+
+  @override
+  Future<void> outputsAppLinkSettings(
+    String buildVariant, {
+    required FlutterProject project,
+  }) async {
+    final String taskName = _getOutputAppLinkSettingsTaskFor(buildVariant);
+    final Stopwatch sw = Stopwatch()
+      ..start();
+    final RunResult result = await _runGradleTask(
+      taskName,
+      options: const <String>['-q'],
+      project: project,
+    );
+    _usage.sendTiming('outputs', 'app link settings', sw.elapsed);
+
+    if (result.exitCode != 0) {
+      _logger.printStatus(result.stdout, wrap: false);
+      _logger.printError(result.stderr, wrap: false);
+    }
+  }
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 }
 
 /// Prints how to consume the AAR from a host app.
@@ -934,10 +1049,10 @@ Iterable<String> listApkPaths(
   ];
   if (androidBuildInfo.splitPerAbi) {
     return <String>[
-      for (AndroidArch androidArch in androidBuildInfo.targetArchs)
+      for (final AndroidArch androidArch in androidBuildInfo.targetArchs)
         <String>[
           'app',
-          getNameForAndroidArch(androidArch),
+          androidArch.archName,
           ...apkPartialName,
         ].join('-'),
     ];
@@ -981,6 +1096,22 @@ File findBundleFile(FlutterProject project, BuildInfo buildInfo, Logger logger, 
     fileCandidates.add(getBundleDirectory(project)
         .childDirectory('${buildInfo.uncapitalizedFlavor}${camelCase('_${buildInfo.modeName}')}')
         .childFile('app-${buildInfo.uncapitalizedFlavor}-${buildInfo.modeName}.aab'));
+
+    // The Android Gradle plugin uses kebab-case and lowercases the first character of the flavor name
+    // when multiple flavor dimensions are used:
+    // e.g.
+    // flavorDimensions "dimension1","dimension2"
+    // productFlavors {
+    //   foo {
+    //     dimension "dimension1"
+    //   }
+    //   bar {
+    //     dimension "dimension2"
+    //   }
+    // }
+    fileCandidates.add(getBundleDirectory(project)
+        .childDirectory('${buildInfo.uncapitalizedFlavor}${camelCase('_${buildInfo.modeName}')}')
+        .childFile('app-${kebabCase(buildInfo.uncapitalizedFlavor!)}-${buildInfo.modeName}.aab'));
   }
   for (final File bundleFile in fileCandidates) {
     if (bundleFile.existsSync()) {
@@ -1056,7 +1187,7 @@ String _getLocalArtifactVersion(String pomPath, FileSystem fileSystem) {
   assert(project.isNotEmpty);
   for (final XmlElement versionElement in document.findAllElements('version')) {
     if (versionElement.parent == project.first) {
-      return versionElement.text;
+      return versionElement.innerText;
     }
   }
   throwToolExit('Error while parsing the <version> element from $pomPath');

@@ -147,7 +147,7 @@ abstract class BuildFrameworkCommand extends BuildSubCommand {
       'xcrun',
       'xcodebuild',
       '-create-xcframework',
-      for (Directory framework in frameworks) ...<String>[
+      for (final Directory framework in frameworks) ...<String>[
         '-framework',
         framework.path,
         ...framework.parent
@@ -239,8 +239,8 @@ class BuildIOSFrameworkCommand extends BuildFrameworkCommand {
     displayNullSafetyMode(buildInfos.first);
     for (final BuildInfo buildInfo in buildInfos) {
       final String? productBundleIdentifier = await project.ios.productBundleIdentifier(buildInfo);
-      globals.printStatus('Building frameworks for $productBundleIdentifier in ${getNameForBuildMode(buildInfo.mode)} mode...');
-      final String xcodeBuildConfiguration = sentenceCase(getNameForBuildMode(buildInfo.mode));
+      globals.printStatus('Building frameworks for $productBundleIdentifier in ${buildInfo.mode.cliName} mode...');
+      final String xcodeBuildConfiguration = sentenceCase(buildInfo.mode.cliName);
       final Directory modeDirectory = outputDirectory.childDirectory(xcodeBuildConfiguration);
 
       if (modeDirectory.existsSync()) {
@@ -270,6 +270,28 @@ class BuildIOSFrameworkCommand extends BuildFrameworkCommand {
 
       final Status status = globals.logger.startProgress(
         ' └─Moving to ${globals.fs.path.relative(modeDirectory.path)}');
+
+      // Copy the native assets. The native assets have already been signed in
+      // buildNativeAssetsMacOS.
+      final Directory nativeAssetsDirectory = globals.fs
+          .directory(getBuildDirectory())
+          .childDirectory('native_assets/ios/');
+      if (await nativeAssetsDirectory.exists()) {
+        final ProcessResult rsyncResult = await globals.processManager.run(<Object>[
+          'rsync',
+          '-av',
+          '--filter',
+          '- .DS_Store',
+          '--filter',
+          '- native_assets.yaml',
+          nativeAssetsDirectory.path,
+          modeDirectory.path,
+        ]);
+        if (rsyncResult.exitCode != 0) {
+          throwToolExit('Failed to copy native assets:\n${rsyncResult.stderr}');
+        }
+      }
+
       try {
         // Delete the intermediaries since they would have been copied into our
         // output frameworks.
@@ -332,7 +354,7 @@ class BuildIOSFrameworkCommand extends BuildFrameworkCommand {
         throwToolExit('Could not find license at ${license.path}');
       }
       final String licenseSource = license.readAsStringSync();
-      final String artifactsMode = mode == BuildMode.debug ? 'ios' : 'ios-${mode.name}';
+      final String artifactsMode = mode == BuildMode.debug ? 'ios' : 'ios-${mode.cliName}';
 
       final String podspecContents = '''
 Pod::Spec.new do |s|
@@ -428,7 +450,7 @@ end
             kTargetFile: targetFile,
             kTargetPlatform: getNameForTargetPlatform(TargetPlatform.ios),
             kIosArchs: defaultIOSArchsForEnvironment(sdkType, globals.artifacts!)
-                .map(getNameForDarwinArch)
+                .map((DarwinArch e) => e.name)
                 .join(' '),
             kSdkRoot: await globals.xcode!.sdkLocation(sdkType),
             ...buildInfo.toBuildSystemEnvironment(),
@@ -510,7 +532,7 @@ end
       }
 
       // Always build debug for simulator.
-      final String simulatorConfiguration = sentenceCase(getNameForBuildMode(BuildMode.debug));
+      final String simulatorConfiguration = sentenceCase(BuildMode.debug.cliName);
       pluginsBuildCommand = <String>[
         ...globals.xcode!.xcrunCommand(),
         'xcodebuild',

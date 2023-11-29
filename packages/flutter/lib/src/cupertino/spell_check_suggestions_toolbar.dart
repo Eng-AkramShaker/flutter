@@ -82,7 +82,11 @@ class CupertinoSpellCheckSuggestionsToolbar extends StatelessWidget {
           CupertinoLocalizations.of(editableTextState.context);
       return <ContextMenuButtonItem>[
         ContextMenuButtonItem(
+<<<<<<< HEAD
           onPressed: () {},
+=======
+          onPressed: null,
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
           label: localizations.noSpellCheckReplacementsLabel,
         )
       ];

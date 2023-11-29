@@ -39,6 +39,7 @@ import 'package:webkit_inspection_protocol/webkit_inspection_protocol.dart';
 
 import '../src/common.dart';
 import '../src/context.dart';
+import '../src/fake_process_manager.dart';
 import '../src/fake_vm_services.dart';
 
 const List<VmServiceExpectation> kAttachLogExpectations =
@@ -73,6 +74,7 @@ const List<VmServiceExpectation> kAttachIsolateExpectations =
   FakeVmServiceRequest(method: 'registerService', args: <String, Object>{
     'service': kFlutterMemoryInfoServiceName,
     'alias': kFlutterToolAlias,
+<<<<<<< HEAD
   }),
   FakeVmServiceRequest(method: 'registerService', args: <String, Object>{
     'service': kFlutterGetIOSBuildOptionsServiceName,
@@ -81,6 +83,8 @@ const List<VmServiceExpectation> kAttachIsolateExpectations =
   FakeVmServiceRequest(method: 'registerService', args: <String, Object>{
     'service': kFlutterGetAndroidBuildVariantsServiceName,
     'alias': kFlutterToolAlias,
+=======
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
   }),
   FakeVmServiceRequest(
     method: 'streamListen',
@@ -628,8 +632,9 @@ void main() {
     ]);
     setupMocks();
     final TestChromiumLauncher chromiumLauncher = TestChromiumLauncher();
+    final FakeProcess process = FakeProcess();
     final Chromium chrome =
-        Chromium(1, chromeConnection, chromiumLauncher: chromiumLauncher);
+        Chromium(1, chromeConnection, chromiumLauncher: chromiumLauncher, process: process, logger: logger);
     chromiumLauncher.setInstance(chrome);
 
     flutterDevice.device = GoogleChromeDevice(
@@ -695,8 +700,9 @@ void main() {
     ]);
     setupMocks();
     final TestChromiumLauncher chromiumLauncher = TestChromiumLauncher();
+    final FakeProcess process = FakeProcess();
     final Chromium chrome =
-        Chromium(1, chromeConnection, chromiumLauncher: chromiumLauncher);
+        Chromium(1, chromeConnection, chromiumLauncher: chromiumLauncher, process: process, logger: logger);
     chromiumLauncher.setInstance(chrome);
 
     flutterDevice.device = GoogleChromeDevice(
@@ -722,8 +728,8 @@ void main() {
     final String entrypointContents =
         fileSystem.file(webDevFS.mainUri).readAsStringSync();
     expect(entrypointContents, contains('// Flutter web bootstrap script'));
-    expect(entrypointContents, contains("import 'dart:ui' as ui;"));
-    expect(entrypointContents, contains('await ui.webOnlyWarmupEngine('));
+    expect(entrypointContents, contains("import 'dart:ui_web' as ui_web;"));
+    expect(entrypointContents, contains('await ui_web.bootstrapEngine('));
 
     expect(logger.statusText, contains('Restarted application in'));
     expect(result.code, 0);
@@ -1033,8 +1039,9 @@ void main() {
     setupMocks();
     final FakeChromeConnection chromeConnection = FakeChromeConnection();
     final TestChromiumLauncher chromiumLauncher = TestChromiumLauncher();
+    final FakeProcess process = FakeProcess();
     final Chromium chrome =
-        Chromium(1, chromeConnection, chromiumLauncher: chromiumLauncher);
+        Chromium(1, chromeConnection, chromiumLauncher: chromiumLauncher, process: process, logger: logger);
     chromiumLauncher.setInstance(chrome);
 
     flutterDevice.device = GoogleChromeDevice(
@@ -1452,6 +1459,7 @@ class FakeResidentCompiler extends Fake implements ResidentCompiler {
     bool suppressErrors = false,
     bool checkDartPluginRegistry = false,
     File? dartPluginRegistrant,
+    Uri? nativeAssetsYaml,
   }) async {
     return const CompilerOutput('foo.dill', 0, <Uri>[]);
   }

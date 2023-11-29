@@ -27,6 +27,7 @@ import 'menu_style.dart';
 import 'menu_theme.dart';
 import 'radio.dart';
 import 'text_button.dart';
+import 'text_theme.dart';
 import 'theme.dart';
 import 'theme_data.dart';
 
@@ -303,6 +304,7 @@ class _MenuAnchorState extends State<MenuAnchor> {
     _anchorChildren.clear();
     _menuController._detach(this);
     _internalMenuController = null;
+    _menuScopeNode.dispose();
     super.dispose();
   }
 
@@ -342,7 +344,7 @@ class _MenuAnchorState extends State<MenuAnchor> {
       // Needs to update the overlay entry on the next frame, since it's in the
       // overlay.
       SchedulerBinding.instance.addPostFrameCallback((Duration _) {
-        _overlayEntry!.markNeedsBuild();
+        _overlayEntry?.markNeedsBuild();
       });
     }
   }
@@ -551,13 +553,15 @@ class _MenuAnchorState extends State<MenuAnchor> {
     }
     _closeChildren(inDispose: inDispose);
     _overlayEntry?.remove();
+    _overlayEntry?.dispose();
     _overlayEntry = null;
     if (!inDispose) {
       // Notify that _childIsOpen changed state, but only if not
       // currently disposing.
       _parent?._childChangedOpenState();
+      widget.onClose?.call();
+      setState(() {});
     }
-    widget.onClose?.call();
   }
 
   void _closeChildren({bool inDispose = false}) {
@@ -1061,6 +1065,7 @@ class _MenuItemButtonState extends State<MenuItemButton> {
       style: mergedStyle,
       statesController: widget.statesController,
       clipBehavior: widget.clipBehavior,
+      isSemanticButton: null,
       child: _MenuItemLabel(
         leadingIcon: widget.leadingIcon,
         shortcut: widget.shortcut,
@@ -1070,14 +1075,14 @@ class _MenuItemButtonState extends State<MenuItemButton> {
       ),
     );
 
-    if (_platformSupportsAccelerators() && widget.enabled) {
+    if (_platformSupportsAccelerators && widget.enabled) {
       child = MenuAcceleratorCallbackBinding(
         onInvoke: _handleSelect,
         child: child,
       );
     }
 
-    return child;
+    return MergeSemantics(child: child);
   }
 
   void _handleFocusChange() {
@@ -1097,10 +1102,16 @@ class _MenuItemButtonState extends State<MenuItemButton> {
 
   void _handleSelect() {
     assert(_debugMenuInfo('Selected ${widget.child} menu'));
-    widget.onPressed?.call();
     if (widget.closeOnActivate) {
       _MenuAnchorState._maybeOf(context)?._root._close();
     }
+    // Delay the call to onPressed until post-frame so that the focus is
+    // restored to what it was before the menu was opened before the action is
+    // executed.
+    SchedulerBinding.instance.addPostFrameCallback((Duration _) {
+      FocusManager.instance.applyFocusChangesIfNeeded();
+      widget.onPressed?.call();
+    });
   }
 
   void _createInternalFocusNodeIfNeeded() {
@@ -1178,7 +1189,7 @@ class CheckboxMenuButton extends StatelessWidget {
   /// The checkbox will have different default container color and check color when
   /// this is true. This is only used when [ThemeData.useMaterial3] is set to true.
   ///
-  /// Must not be null. Defaults to false.
+  /// Defaults to false.
   final bool isError;
 
   /// Called when the value of the checkbox should change.
@@ -1548,6 +1559,7 @@ class SubmenuButton extends StatefulWidget {
     this.onFocusChange,
     this.onOpen,
     this.onClose,
+    this.controller,
     this.style,
     this.menuStyle,
     this.alignmentOffset,
@@ -1577,6 +1589,9 @@ class SubmenuButton extends StatefulWidget {
 
   /// A callback that is invoked when the menu is closed.
   final VoidCallback? onClose;
+
+  /// An optional [MenuController] for this submenu.
+  final MenuController? controller;
 
   /// Customizes this button's appearance.
   ///
@@ -1760,7 +1775,8 @@ class SubmenuButton extends StatefulWidget {
 class _SubmenuButtonState extends State<SubmenuButton> {
   FocusNode? _internalFocusNode;
   bool _waitingToFocusMenu = false;
-  final MenuController _menuController = MenuController();
+  MenuController? _internalMenuController;
+  MenuController get _menuController => widget.controller ?? _internalMenuController!;
   _MenuAnchorState? get _anchor => _MenuAnchorState._maybeOf(context);
   FocusNode get _buttonFocusNode => widget.focusNode ?? _internalFocusNode!;
   bool get _enabled => widget.menuChildren.isNotEmpty;
@@ -1777,12 +1793,15 @@ class _SubmenuButtonState extends State<SubmenuButton> {
         return true;
       }());
     }
+    if (widget.controller == null) {
+      _internalMenuController = MenuController();
+    }
     _buttonFocusNode.addListener(_handleFocusChange);
   }
 
   @override
   void dispose() {
-    _internalFocusNode?.removeListener(_handleFocusChange);
+    _buttonFocusNode.removeListener(_handleFocusChange);
     _internalFocusNode?.dispose();
     _internalFocusNode = null;
     super.dispose();
@@ -1810,6 +1829,9 @@ class _SubmenuButtonState extends State<SubmenuButton> {
       }
       _buttonFocusNode.addListener(_handleFocusChange);
     }
+    if (widget.controller != oldWidget.controller) {
+      _internalMenuController = (oldWidget.controller == null) ? null : MenuController();
+    }
   }
 
   @override
@@ -1836,7 +1858,16 @@ class _SubmenuButtonState extends State<SubmenuButton> {
       alignmentOffset: menuPaddingOffset,
       clipBehavior: widget.clipBehavior,
       onClose: widget.onClose,
-      onOpen: widget.onOpen,
+      onOpen: () {
+        if (!_waitingToFocusMenu) {
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            _menuController._anchor?._focusButton();
+            _waitingToFocusMenu = false;
+          });
+          _waitingToFocusMenu = true;
+        }
+        widget.onOpen?.call();
+      },
       style: widget.menuStyle,
       builder: (BuildContext context, MenuController controller, Widget? child) {
         // Since we don't want to use the theme style or default style from the
@@ -1857,16 +1888,6 @@ class _SubmenuButtonState extends State<SubmenuButton> {
             controller.close();
           } else {
             controller.open();
-            if (!_waitingToFocusMenu) {
-              // Only schedule this if it's not already scheduled.
-              SchedulerBinding.instance.addPostFrameCallback((Duration _) {
-                // This has to happen in the next frame because the menu bar is
-                // not focusable until the first menu is open.
-                controller._anchor?._focusButton();
-                _waitingToFocusMenu = false;
-              });
-              _waitingToFocusMenu = true;
-            }
           }
         }
 
@@ -1886,22 +1907,27 @@ class _SubmenuButtonState extends State<SubmenuButton> {
             controller._anchor!._focusButton();
           }
         }
-
-        child = TextButton(
-          style: mergedStyle,
-          focusNode: _buttonFocusNode,
-          onHover: _enabled ? (bool hovering) => handleHover(hovering, context) : null,
-          onPressed: _enabled ? () => toggleShowMenu(context) : null,
-          child: _MenuItemLabel(
-            leadingIcon: widget.leadingIcon,
-            trailingIcon: widget.trailingIcon,
-            hasSubmenu: true,
-            showDecoration: (controller._anchor!._parent?._orientation ?? Axis.horizontal) == Axis.vertical,
-            child: child ?? const SizedBox(),
+        child = MergeSemantics(
+          child: Semantics(
+            expanded: controller.isOpen,
+            child: TextButton(
+              style: mergedStyle,
+              focusNode: _buttonFocusNode,
+              onHover: _enabled ? (bool hovering) => handleHover(hovering, context) : null,
+              onPressed: _enabled ? () => toggleShowMenu(context) : null,
+              isSemanticButton: null,
+              child: _MenuItemLabel(
+                leadingIcon: widget.leadingIcon,
+                trailingIcon: widget.trailingIcon,
+                hasSubmenu: true,
+                showDecoration: (controller._anchor!._parent?._orientation ?? Axis.horizontal) == Axis.vertical,
+                child: child ?? const SizedBox(),
+              ),
+            ),
           ),
         );
 
-        if (_enabled && _platformSupportsAccelerators()) {
+        if (_enabled && _platformSupportsAccelerators) {
           return MenuAcceleratorCallbackBinding(
             onInvoke: () => toggleShowMenu(context),
             hasSubmenu: true,
@@ -2030,33 +2056,44 @@ class _LocalizedShortcutLabeler {
   String getShortcutLabel(MenuSerializableShortcut shortcut, MaterialLocalizations localizations) {
     final ShortcutSerialization serialized = shortcut.serializeForMenu();
     final String keySeparator;
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.iOS:
-      case TargetPlatform.macOS:
+    if (_usesSymbolicModifiers) {
         // Use "⌃ ⇧ A" style on macOS and iOS.
         keySeparator = ' ';
-      case TargetPlatform.android:
-      case TargetPlatform.fuchsia:
-      case TargetPlatform.linux:
-      case TargetPlatform.windows:
+    } else {
         // Use "Ctrl+Shift+A" style.
         keySeparator = '+';
     }
     if (serialized.trigger != null) {
       final List<String> modifiers = <String>[];
       final LogicalKeyboardKey trigger = serialized.trigger!;
-      // These should be in this order, to match the LogicalKeySet version.
-      if (serialized.alt!) {
-        modifiers.add(_getModifierLabel(LogicalKeyboardKey.alt, localizations));
-      }
-      if (serialized.control!) {
-        modifiers.add(_getModifierLabel(LogicalKeyboardKey.control, localizations));
-      }
-      if (serialized.meta!) {
-        modifiers.add(_getModifierLabel(LogicalKeyboardKey.meta, localizations));
-      }
-      if (serialized.shift!) {
-        modifiers.add(_getModifierLabel(LogicalKeyboardKey.shift, localizations));
+      if (_usesSymbolicModifiers) {
+        // macOS/iOS platform convention uses this ordering, with ⌘ always last.
+        if (serialized.control!) {
+          modifiers.add(_getModifierLabel(LogicalKeyboardKey.control, localizations));
+        }
+        if (serialized.alt!) {
+          modifiers.add(_getModifierLabel(LogicalKeyboardKey.alt, localizations));
+        }
+        if (serialized.shift!) {
+          modifiers.add(_getModifierLabel(LogicalKeyboardKey.shift, localizations));
+        }
+        if (serialized.meta!) {
+          modifiers.add(_getModifierLabel(LogicalKeyboardKey.meta, localizations));
+        }
+      } else {
+        // These should be in this order, to match the LogicalKeySet version.
+        if (serialized.alt!) {
+          modifiers.add(_getModifierLabel(LogicalKeyboardKey.alt, localizations));
+        }
+        if (serialized.control!) {
+          modifiers.add(_getModifierLabel(LogicalKeyboardKey.control, localizations));
+        }
+        if (serialized.meta!) {
+          modifiers.add(_getModifierLabel(LogicalKeyboardKey.meta, localizations));
+        }
+        if (serialized.shift!) {
+          modifiers.add(_getModifierLabel(LogicalKeyboardKey.shift, localizations));
+        }
       }
       String? shortcutTrigger;
       final int logicalKeyId = trigger.keyId;
@@ -2829,7 +2866,7 @@ class _MenuAcceleratorLabelState extends State<MenuAcceleratorLabel> {
   @override
   void initState() {
     super.initState();
-    if (_platformSupportsAccelerators()) {
+    if (_platformSupportsAccelerators) {
       _showAccelerators = _altIsPressed();
       HardwareKeyboard.instance.addHandler(_handleKeyEvent);
     }
@@ -2838,9 +2875,9 @@ class _MenuAcceleratorLabelState extends State<MenuAcceleratorLabel> {
 
   @override
   void dispose() {
-    assert(_platformSupportsAccelerators() || _shortcutRegistryEntry == null);
+    assert(_platformSupportsAccelerators || _shortcutRegistryEntry == null);
     _displayLabel = '';
-    if (_platformSupportsAccelerators()) {
+    if (_platformSupportsAccelerators) {
       _shortcutRegistryEntry?.dispose();
       _shortcutRegistryEntry = null;
       _shortcutRegistry = null;
@@ -2853,7 +2890,7 @@ class _MenuAcceleratorLabelState extends State<MenuAcceleratorLabel> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_platformSupportsAccelerators()) {
+    if (!_platformSupportsAccelerators) {
       return;
     }
     _binding = MenuAcceleratorCallbackBinding.maybeOf(context);
@@ -2881,7 +2918,7 @@ class _MenuAcceleratorLabelState extends State<MenuAcceleratorLabel> {
   }
 
   bool _handleKeyEvent(KeyEvent event) {
-    assert(_platformSupportsAccelerators());
+    assert(_platformSupportsAccelerators);
     final bool altIsPressed = _altIsPressed();
     if (altIsPressed != _showAccelerators) {
       setState(() {
@@ -2894,7 +2931,7 @@ class _MenuAcceleratorLabelState extends State<MenuAcceleratorLabel> {
   }
 
   void _updateAcceleratorShortcut() {
-    assert(_platformSupportsAccelerators());
+    assert(_platformSupportsAccelerators);
     _shortcutRegistryEntry?.dispose();
     _shortcutRegistryEntry = null;
     // Before registering an accelerator as a shortcut it should meet these
@@ -3177,7 +3214,7 @@ class _MenuLayout extends SingleChildLayoutDelegate {
       } else if (offBottom(y)) {
         final double newY = anchorRect.top - childSize.height;
         if (!offTop(newY)) {
-          // Only move the menu up if its parent is horizontal (MenuAchor/MenuBar).
+          // Only move the menu up if its parent is horizontal (MenuAnchor/MenuBar).
           if (parentOrientation == Axis.horizontal) {
             y = newY - alignmentOffset.dy;
           } else {
@@ -3547,21 +3584,36 @@ bool _debugMenuInfo(String message, [Iterable<String>? details]) {
   return true;
 }
 
-bool _platformSupportsAccelerators() {
+/// Whether [defaultTargetPlatform] is an Apple platform (Mac or iOS).
+bool get _isApple {
   switch (defaultTargetPlatform) {
+    case TargetPlatform.iOS:
+    case TargetPlatform.macOS:
+      return true;
     case TargetPlatform.android:
     case TargetPlatform.fuchsia:
     case TargetPlatform.linux:
     case TargetPlatform.windows:
-      return true;
-    case TargetPlatform.iOS:
-    case TargetPlatform.macOS:
-      // On iOS and macOS, pressing the Option key (a.k.a. the Alt key) causes a
-      // different set of characters to be generated, and the native menus don't
-      // support accelerators anyhow, so we just disable accelerators on these
-      // platforms.
       return false;
   }
+}
+
+/// Whether [defaultTargetPlatform] is one that uses symbolic shortcuts.
+///
+/// Mac and iOS use special symbols for modifier keys instead of their names,
+/// render them in a particular order defined by Apple's human interface
+/// guidelines, and format them so that the modifier keys always align.
+bool get _usesSymbolicModifiers {
+  return _isApple;
+}
+
+
+bool get _platformSupportsAccelerators {
+  // On iOS and macOS, pressing the Option key (a.k.a. the Alt key) causes a
+  // different set of characters to be generated, and the native menus don't
+  // support accelerators anyhow, so we just disable accelerators on these
+  // platforms.
+  return !_isApple;
 }
 
 // BEGIN GENERATED TOKEN PROPERTIES - Menu
@@ -3570,8 +3622,6 @@ bool _platformSupportsAccelerators() {
 // "END GENERATED" comments are generated from data in the Material
 // Design token database by the script:
 //   dev/tools/gen_defaults/bin/gen_defaults.dart.
-
-// Token database version: v0_162
 
 class _MenuBarDefaultsM3 extends MenuStyle {
   _MenuBarDefaultsM3(this.context)
@@ -3627,6 +3677,7 @@ class _MenuButtonDefaultsM3 extends ButtonStyle {
   final BuildContext context;
 
   late final ColorScheme _colors = Theme.of(context).colorScheme;
+  late final TextTheme _textTheme = Theme.of(context).textTheme;
 
   @override
   MaterialStateProperty<Color?>? get backgroundColor {
@@ -3742,7 +3793,9 @@ class _MenuButtonDefaultsM3 extends ButtonStyle {
 
   @override
   MaterialStateProperty<TextStyle?> get textStyle {
-    return MaterialStatePropertyAll<TextStyle?>(Theme.of(context).textTheme.bodyLarge);
+    // TODO(tahatesser): This is taken from https://m3.material.io/components/menus/specs
+    // Update this when the token is available.
+    return MaterialStatePropertyAll<TextStyle?>(_textTheme.labelLarge);
   }
 
   @override

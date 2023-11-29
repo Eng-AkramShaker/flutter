@@ -13,7 +13,6 @@ import 'back_button.dart';
 import 'button_style.dart';
 import 'calendar_date_picker.dart';
 import 'color_scheme.dart';
-import 'colors.dart';
 import 'date.dart';
 import 'date_picker_theme.dart';
 import 'debug.dart';
@@ -47,29 +46,47 @@ const Size _inputRangeLandscapeDialogSize = Size(496, 164.0);
 const Duration _dialogSizeAnimationDuration = Duration(milliseconds: 200);
 const double _inputFormPortraitHeight = 98.0;
 const double _inputFormLandscapeHeight = 108.0;
+const double _kMaxTextScaleFactor = 1.3;
 
 /// Shows a dialog containing a Material Design date picker.
 ///
 /// The returned [Future] resolves to the date selected by the user when the
 /// user confirms the dialog. If the user cancels the dialog, null is returned.
 ///
-/// When the date picker is first displayed, it will show the month of
-/// [initialDate], with [initialDate] selected.
+/// When the date picker is first displayed, if [initialDate] is not null, it
+/// will show the month of [initialDate], with [initialDate] selected. Otherwise
+/// it will show the [currentDate]'s month.
 ///
 /// The [firstDate] is the earliest allowable date. The [lastDate] is the latest
-/// allowable date. [initialDate] must either fall between these dates,
-/// or be equal to one of them. For each of these [DateTime] parameters, only
-/// their dates are considered. Their time fields are ignored. They must all
-/// be non-null.
+/// allowable date. If [initialDate] is not null, it must either fall between
+/// these dates, or be equal to one of them. For each of these [DateTime]
+/// parameters, only their dates are considered. Their time fields are ignored.
+/// They must all be non-null.
 ///
 /// The [currentDate] represents the current day (i.e. today). This
 /// date will be highlighted in the day grid. If null, the date of
-/// `DateTime.now()` will be used.
+/// [DateTime.now] will be used.
 ///
 /// An optional [initialEntryMode] argument can be used to display the date
 /// picker in the [DatePickerEntryMode.calendar] (a calendar month grid)
 /// or [DatePickerEntryMode.input] (a text input field) mode.
-/// It defaults to [DatePickerEntryMode.calendar] and must be non-null.
+/// It defaults to [DatePickerEntryMode.calendar].
+///
+/// {@template flutter.material.date_picker.switchToInputEntryModeIcon}
+/// An optional [switchToInputEntryModeIcon] argument can be used to
+/// display a custom Icon in the corner of the dialog
+/// when [DatePickerEntryMode] is [DatePickerEntryMode.calendar]. Clicking on
+/// icon changes the [DatePickerEntryMode] to [DatePickerEntryMode.input].
+/// If null, `Icon(useMaterial3 ? Icons.edit_outlined : Icons.edit)` is used.
+/// {@endtemplate}
+///
+/// {@template flutter.material.date_picker.switchToCalendarEntryModeIcon}
+/// An optional [switchToCalendarEntryModeIcon] argument can be used to
+/// display a custom Icon in the corner of the dialog
+/// when [DatePickerEntryMode] is [DatePickerEntryMode.input]. Clicking on
+/// icon changes the [DatePickerEntryMode] to [DatePickerEntryMode.calendar].
+/// If null, `Icon(Icons.calendar_today)` is used.
+/// {@endtemplate}
 ///
 /// An optional [selectableDayPredicate] function can be passed in to only allow
 /// certain days for selection. If provided, only the days that
@@ -97,17 +114,16 @@ const double _inputFormLandscapeHeight = 108.0;
 /// [locale] and [textDirection] are non-null, [textDirection] overrides the
 /// direction chosen for the [locale].
 ///
-/// The [context], [useRootNavigator] and [routeSettings] arguments are passed to
-/// [showDialog], the documentation for which discusses how it is used. [context]
-/// and [useRootNavigator] must be non-null.
+/// The [context], [barrierDismissible], [barrierColor], [barrierLabel],
+/// [useRootNavigator] and [routeSettings] arguments are passed to [showDialog],
+/// the documentation for which discusses how it is used.
 ///
 /// The [builder] parameter can be used to wrap the dialog widget
 /// to add inherited widgets like [Theme].
 ///
 /// An optional [initialDatePickerMode] argument can be used to have the
 /// calendar date picker initially appear in the [DatePickerMode.year] or
-/// [DatePickerMode.day] mode. It defaults to [DatePickerMode.day], and
-/// must be non-null.
+/// [DatePickerMode.day] mode. It defaults to [DatePickerMode.day].
 ///
 /// {@macro flutter.widgets.RawDialogRoute}
 ///
@@ -140,10 +156,9 @@ const double _inputFormLandscapeHeight = 108.0;
 ///  * [DisplayFeatureSubScreen], which documents the specifics of how
 ///    [DisplayFeature]s can split the screen into sub-screens.
 ///  * [showTimePicker], which shows a dialog that contains a Material Design time picker.
-///
 Future<DateTime?> showDatePicker({
   required BuildContext context,
-  required DateTime initialDate,
+  DateTime? initialDate,
   required DateTime firstDate,
   required DateTime lastDate,
   DateTime? currentDate,
@@ -153,6 +168,9 @@ Future<DateTime?> showDatePicker({
   String? cancelText,
   String? confirmText,
   Locale? locale,
+  bool barrierDismissible = true,
+  Color? barrierColor,
+  String? barrierLabel,
   bool useRootNavigator = true,
   RouteSettings? routeSettings,
   TextDirection? textDirection,
@@ -164,9 +182,11 @@ Future<DateTime?> showDatePicker({
   String? fieldLabelText,
   TextInputType? keyboardType,
   Offset? anchorPoint,
-  final ValueChanged<DatePickerEntryMode>? onDatePickerModeChange
+  final ValueChanged<DatePickerEntryMode>? onDatePickerModeChange,
+  final Icon? switchToInputEntryModeIcon,
+  final Icon? switchToCalendarEntryModeIcon,
 }) async {
-  initialDate = DateUtils.dateOnly(initialDate);
+  initialDate = initialDate == null ? null : DateUtils.dateOnly(initialDate);
   firstDate = DateUtils.dateOnly(firstDate);
   lastDate = DateUtils.dateOnly(lastDate);
   assert(
@@ -174,15 +194,15 @@ Future<DateTime?> showDatePicker({
     'lastDate $lastDate must be on or after firstDate $firstDate.',
   );
   assert(
-    !initialDate.isBefore(firstDate),
+    initialDate == null || !initialDate.isBefore(firstDate),
     'initialDate $initialDate must be on or after firstDate $firstDate.',
   );
   assert(
-    !initialDate.isAfter(lastDate),
+    initialDate == null || !initialDate.isAfter(lastDate),
     'initialDate $initialDate must be on or before lastDate $lastDate.',
   );
   assert(
-    selectableDayPredicate == null || selectableDayPredicate(initialDate),
+    selectableDayPredicate == null || initialDate == null || selectableDayPredicate(initialDate),
     'Provided initialDate $initialDate must satisfy provided selectableDayPredicate.',
   );
   assert(debugCheckHasMaterialLocalizations(context));
@@ -204,6 +224,8 @@ Future<DateTime?> showDatePicker({
     fieldLabelText: fieldLabelText,
     keyboardType: keyboardType,
     onDatePickerModeChange: onDatePickerModeChange,
+    switchToInputEntryModeIcon: switchToInputEntryModeIcon,
+    switchToCalendarEntryModeIcon: switchToCalendarEntryModeIcon,
   );
 
   if (textDirection != null) {
@@ -223,6 +245,9 @@ Future<DateTime?> showDatePicker({
 
   return showDialog<DateTime>(
     context: context,
+    barrierDismissible: barrierDismissible,
+    barrierColor: barrierColor,
+    barrierLabel: barrierLabel,
     useRootNavigator: useRootNavigator,
     routeSettings: routeSettings,
     builder: (BuildContext context) {
@@ -245,7 +270,7 @@ class DatePickerDialog extends StatefulWidget {
   /// A Material-style date picker dialog.
   DatePickerDialog({
     super.key,
-    required DateTime initialDate,
+    DateTime? initialDate,
     required DateTime firstDate,
     required DateTime lastDate,
     DateTime? currentDate,
@@ -261,8 +286,10 @@ class DatePickerDialog extends StatefulWidget {
     this.fieldLabelText,
     this.keyboardType,
     this.restorationId,
-    this.onDatePickerModeChange
-  }) : initialDate = DateUtils.dateOnly(initialDate),
+    this.onDatePickerModeChange,
+    this.switchToInputEntryModeIcon,
+    this.switchToCalendarEntryModeIcon,
+  }) : initialDate = initialDate == null ? null : DateUtils.dateOnly(initialDate),
        firstDate = DateUtils.dateOnly(firstDate),
        lastDate = DateUtils.dateOnly(lastDate),
        currentDate = DateUtils.dateOnly(currentDate ?? DateTime.now()) {
@@ -271,21 +298,24 @@ class DatePickerDialog extends StatefulWidget {
       'lastDate ${this.lastDate} must be on or after firstDate ${this.firstDate}.',
     );
     assert(
-      !this.initialDate.isBefore(this.firstDate),
+      initialDate == null || !this.initialDate!.isBefore(this.firstDate),
       'initialDate ${this.initialDate} must be on or after firstDate ${this.firstDate}.',
     );
     assert(
-      !this.initialDate.isAfter(this.lastDate),
+      initialDate == null || !this.initialDate!.isAfter(this.lastDate),
       'initialDate ${this.initialDate} must be on or before lastDate ${this.lastDate}.',
     );
     assert(
-      selectableDayPredicate == null || selectableDayPredicate!(this.initialDate),
+      selectableDayPredicate == null || initialDate == null || selectableDayPredicate!(this.initialDate!),
       'Provided initialDate ${this.initialDate} must satisfy provided selectableDayPredicate',
     );
   }
 
   /// The initially selected [DateTime] that the picker should display.
-  final DateTime initialDate;
+  ///
+  /// If this is null, there is no selected date. A date must be selected to
+  /// submit the dialog.
+  final DateTime? initialDate;
 
   /// The earliest allowable [DateTime] that the user can select.
   final DateTime firstDate;
@@ -370,14 +400,28 @@ class DatePickerDialog extends StatefulWidget {
   /// `initialEntryMode` parameter the next time the date picker is shown.
   final ValueChanged<DatePickerEntryMode>? onDatePickerModeChange;
 
+  /// {@macro flutter.material.date_picker.switchToInputEntryModeIcon}
+  final Icon? switchToInputEntryModeIcon;
+
+  /// {@macro flutter.material.date_picker.switchToCalendarEntryModeIcon}
+  final Icon? switchToCalendarEntryModeIcon;
+
   @override
   State<DatePickerDialog> createState() => _DatePickerDialogState();
 }
 
 class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMixin {
-  late final RestorableDateTime _selectedDate = RestorableDateTime(widget.initialDate);
+  late final RestorableDateTimeN _selectedDate = RestorableDateTimeN(widget.initialDate);
   late final _RestorableDatePickerEntryMode _entryMode = _RestorableDatePickerEntryMode(widget.initialEntryMode);
   final _RestorableAutovalidateMode _autovalidateMode = _RestorableAutovalidateMode(AutovalidateMode.disabled);
+
+  @override
+  void dispose() {
+    _selectedDate.dispose();
+    _entryMode.dispose();
+    _autovalidateMode.dispose();
+    super.dispose();
+  }
 
   @override
   String? get restorationId => widget.restorationId;
@@ -409,9 +453,7 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
   }
 
   void _handleOnDatePickerModeChange() {
-    if (widget.onDatePickerModeChange != null) {
-      widget.onDatePickerModeChange!(_entryMode.value);
-    }
+    widget.onDatePickerModeChange?.call(_entryMode.value);
   }
 
   void _handleEntryModeToggle() {
@@ -427,7 +469,7 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
            _handleOnDatePickerModeChange();
         case DatePickerEntryMode.calendarOnly:
         case DatePickerEntryMode.inputOnly:
-          assert(false, 'Can not change entry mode from _entryMode');
+          assert(false, 'Can not change entry mode from ${_entryMode.value}');
       }
     });
   }
@@ -508,6 +550,7 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
         spacing: 8,
         children: <Widget>[
           TextButton(
+            style: datePickerTheme.cancelButtonStyle ?? defaults.cancelButtonStyle,
             onPressed: _handleCancel,
             child: Text(widget.cancelText ?? (
               useMaterial3
@@ -516,6 +559,7 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
             )),
           ),
           TextButton(
+            style: datePickerTheme.confirmButtonStyle ?? defaults.confirmButtonStyle,
             onPressed: _handleOk,
             child: Text(widget.confirmText ?? localizations.okButtonLabel),
           ),
@@ -576,7 +620,7 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
       case DatePickerEntryMode.calendar:
         picker = calendarDatePicker();
         entryModeButton = IconButton(
-          icon:  Icon(useMaterial3 ? Icons.edit_outlined : Icons.edit),
+          icon: widget.switchToInputEntryModeIcon ?? Icon(useMaterial3 ? Icons.edit_outlined : Icons.edit),
           color: headerForegroundColor,
           tooltip: localizations.inputDateModeButtonLabel,
           onPressed: _handleEntryModeToggle,
@@ -589,7 +633,7 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
       case DatePickerEntryMode.input:
         picker = inputDatePicker();
         entryModeButton = IconButton(
-          icon: const Icon(Icons.calendar_today),
+          icon: widget.switchToCalendarEntryModeIcon ?? const Icon(Icons.calendar_today),
           color: headerForegroundColor,
           tooltip: localizations.calendarModeButtonLabel,
           onPressed: _handleEntryModeToggle,
@@ -606,7 +650,7 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
           ? localizations.datePickerHelpText
           : localizations.datePickerHelpText.toUpperCase()
       ),
-      titleText: localizations.formatMediumDate(_selectedDate.value),
+      titleText: _selectedDate.value == null ? '' : localizations.formatMediumDate(_selectedDate.value!),
       titleStyle: headlineStyle,
       orientation: orientation,
       isShort: orientation == Orientation.landscape,
@@ -615,7 +659,7 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
 
     // Constrain the textScaleFactor to the largest supported value to prevent
     // layout issues.
-    final double textScaleFactor = math.min(MediaQuery.textScaleFactorOf(context), 1.3);
+    final double textScaleFactor = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: _kMaxTextScaleFactor).textScaleFactor;
     final Size dialogSize = _dialogSize(context) * textScaleFactor;
     final DialogTheme dialogTheme = theme.dialogTheme;
     return Dialog(
@@ -635,11 +679,16 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
         height: dialogSize.height,
         duration: _dialogSizeAnimationDuration,
         curve: Curves.easeIn,
-        child: MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaleFactor: textScaleFactor,
-          ),
-          child: Builder(builder: (BuildContext context) {
+        child: MediaQuery.withClampedTextScaling(
+          // Constrain the textScaleFactor to the largest supported value to prevent
+          // layout issues.
+          maxScaleFactor: _kMaxTextScaleFactor,
+          child: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
+            final Size portraitDialogSize = useMaterial3 ? _inputPortraitDialogSizeM3 : _inputPortraitDialogSizeM2;
+            // Make sure the portrait dialog can fit the contents comfortably when
+            // resized from the landscape dialog.
+            final bool isFullyPortrait = constraints.maxHeight >= portraitDialogSize.height;
+
             switch (orientation) {
               case Orientation.portrait:
                 return Column(
@@ -647,9 +696,11 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     header,
-                    if (useMaterial3) const Divider(),
-                    Expanded(child: picker),
-                    actions,
+                    if (useMaterial3) Divider(height: 0, color: datePickerTheme.dividerColor),
+                    if (isFullyPortrait) ...<Widget>[
+                      Expanded(child: picker),
+                      actions,
+                    ],
                   ],
                 );
               case Orientation.landscape:
@@ -658,7 +709,7 @@ class _DatePickerDialogState extends State<DatePickerDialog> with RestorationMix
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     header,
-                    if (useMaterial3) const VerticalDivider(),
+                    if (useMaterial3) VerticalDivider(width: 0, color: datePickerTheme.dividerColor),
                     Flexible(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -822,6 +873,7 @@ class _DatePickerHeader extends StatelessWidget {
               padding: const EdgeInsetsDirectional.only(
                 start: 24,
                 end: 12,
+                bottom: 12,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -890,7 +942,7 @@ class _DatePickerHeader extends StatelessWidget {
 /// before or on `initialDateRange.end`.
 ///
 /// The [firstDate] is the earliest allowable date. The [lastDate] is the latest
-/// allowable date. Both must be non-null.
+/// allowable date.
 ///
 /// If an initial date range is provided, `initialDateRange.start`
 /// and `initialDateRange.end` must both fall between or on [firstDate] and
@@ -904,7 +956,11 @@ class _DatePickerHeader extends StatelessWidget {
 /// An optional [initialEntryMode] argument can be used to display the date
 /// picker in the [DatePickerEntryMode.calendar] (a scrollable calendar month
 /// grid) or [DatePickerEntryMode.input] (two text input fields) mode.
-/// It defaults to [DatePickerEntryMode.calendar] and must be non-null.
+/// It defaults to [DatePickerEntryMode.calendar].
+///
+/// {@macro flutter.material.date_picker.switchToInputEntryModeIcon}
+///
+/// {@macro flutter.material.date_picker.switchToCalendarEntryModeIcon}
 ///
 /// The following optional string parameters allow you to override the default
 /// text used for various parts of the dialog:
@@ -936,9 +992,9 @@ class _DatePickerHeader extends StatelessWidget {
 /// [locale] and [textDirection] are non-null, [textDirection] overrides the
 /// direction chosen for the [locale].
 ///
-/// The [context], [useRootNavigator] and [routeSettings] arguments are passed
-/// to [showDialog], the documentation for which discusses how it is used.
-/// [context] and [useRootNavigator] must be non-null.
+/// The [context], [barrierDismissible], [barrierColor], [barrierLabel],
+/// [useRootNavigator] and [routeSettings] arguments are passed to [showDialog],
+/// the documentation for which discusses how it is used.
 ///
 /// The [builder] parameter can be used to wrap the dialog widget
 /// to add inherited widgets like [Theme].
@@ -991,12 +1047,17 @@ Future<DateTimeRange?> showDateRangePicker({
   String? fieldStartLabelText,
   String? fieldEndLabelText,
   Locale? locale,
+  bool barrierDismissible = true,
+  Color? barrierColor,
+  String? barrierLabel,
   bool useRootNavigator = true,
   RouteSettings? routeSettings,
   TextDirection? textDirection,
   TransitionBuilder? builder,
   Offset? anchorPoint,
   TextInputType keyboardType = TextInputType.datetime,
+  final Icon? switchToInputEntryModeIcon,
+  final Icon? switchToCalendarEntryModeIcon,
 }) async {
   assert(
     initialDateRange == null || !initialDateRange.start.isAfter(initialDateRange.end),
@@ -1046,6 +1107,8 @@ Future<DateTimeRange?> showDateRangePicker({
     fieldStartLabelText: fieldStartLabelText,
     fieldEndLabelText: fieldEndLabelText,
     keyboardType: keyboardType,
+    switchToInputEntryModeIcon: switchToInputEntryModeIcon,
+    switchToCalendarEntryModeIcon: switchToCalendarEntryModeIcon,
   );
 
   if (textDirection != null) {
@@ -1065,6 +1128,9 @@ Future<DateTimeRange?> showDateRangePicker({
 
   return showDialog<DateTimeRange>(
     context: context,
+    barrierDismissible: barrierDismissible,
+    barrierColor: barrierColor,
+    barrierLabel: barrierLabel,
     useRootNavigator: useRootNavigator,
     routeSettings: routeSettings,
     useSafeArea: false,
@@ -1134,6 +1200,8 @@ class DateRangePickerDialog extends StatefulWidget {
     this.fieldEndLabelText,
     this.keyboardType = TextInputType.datetime,
     this.restorationId,
+    this.switchToInputEntryModeIcon,
+    this.switchToCalendarEntryModeIcon,
   });
 
   /// The date range that the date range picker starts with when it opens.
@@ -1167,7 +1235,7 @@ class DateRangePickerDialog extends StatefulWidget {
   /// scrollable calendar month grid) or [DatePickerEntryMode.input] (two text
   /// input fields) mode.
   ///
-  /// It defaults to [DatePickerEntryMode.calendar] and must be non-null.
+  /// It defaults to [DatePickerEntryMode.calendar].
   final DatePickerEntryMode initialEntryMode;
 
   /// The label on the cancel button for the text input mode.
@@ -1256,6 +1324,12 @@ class DateRangePickerDialog extends StatefulWidget {
   ///    Flutter.
   final String? restorationId;
 
+  /// {@macro flutter.material.date_picker.switchToInputEntryModeIcon}
+  final Icon? switchToInputEntryModeIcon;
+
+  /// {@macro flutter.material.date_picker.switchToCalendarEntryModeIcon}
+  final Icon? switchToCalendarEntryModeIcon;
+
   @override
   State<DateRangePickerDialog> createState() => _DateRangePickerDialogState();
 }
@@ -1308,7 +1382,7 @@ class _DateRangePickerDialogState extends State<DateRangePickerDialog> with Rest
           _entryMode.value = DatePickerEntryMode.input;
 
         case DatePickerEntryMode.input:
-        // Validate the range dates
+          // Validate the range dates
           if (_selectedStart.value != null &&
               (_selectedStart.value!.isBefore(widget.firstDate) || _selectedStart.value!.isAfter(widget.lastDate))) {
             _selectedStart.value = null;
@@ -1347,7 +1421,6 @@ class _DateRangePickerDialogState extends State<DateRangePickerDialog> with Rest
     final ThemeData theme = Theme.of(context);
     final bool useMaterial3 = theme.useMaterial3;
     final Orientation orientation = MediaQuery.orientationOf(context);
-    final double textScaleFactor = math.min(MediaQuery.textScaleFactorOf(context), 1.3);
     final MaterialLocalizations localizations = MaterialLocalizations.of(context);
     final DatePickerThemeData datePickerTheme = DatePickerTheme.of(context);
     final DatePickerThemeData defaults =  DatePickerTheme.defaults(context);
@@ -1378,7 +1451,7 @@ class _DateRangePickerDialogState extends State<DateRangePickerDialog> with Rest
           onCancel: _handleCancel,
           entryModeButton: showEntryModeButton
             ? IconButton(
-                icon: Icon(useMaterial3 ? Icons.edit_outlined : Icons.edit),
+                icon: widget.switchToInputEntryModeIcon ?? Icon(useMaterial3 ? Icons.edit_outlined : Icons.edit),
                 padding: EdgeInsets.zero,
                 tooltip: localizations.inputDateModeButtonLabel,
                 onPressed: _handleEntryModeToggle,
@@ -1444,7 +1517,7 @@ class _DateRangePickerDialogState extends State<DateRangePickerDialog> with Rest
           onCancel: _handleCancel,
           entryModeButton: showEntryModeButton
             ? IconButton(
-                icon: const Icon(Icons.calendar_today),
+                icon: widget.switchToCalendarEntryModeIcon ?? const Icon(Icons.calendar_today),
                 padding: EdgeInsets.zero,
                 tooltip: localizations.calendarModeButtonLabel,
                 onPressed: _handleEntryModeToggle,
@@ -1491,10 +1564,8 @@ class _DateRangePickerDialogState extends State<DateRangePickerDialog> with Rest
         height: size.height,
         duration: _dialogSizeAnimationDuration,
         curve: Curves.easeIn,
-        child: MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaleFactor: textScaleFactor,
-          ),
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: _kMaxTextScaleFactor,
           child: Builder(builder: (BuildContext context) {
             return contents;
           }),
@@ -1543,6 +1614,7 @@ class _CalendarRangePickerDialog extends StatelessWidget {
     final DatePickerThemeData themeData = DatePickerTheme.of(context);
     final DatePickerThemeData defaults = DatePickerTheme.defaults(context);
     final Color? dialogBackground = themeData.rangePickerBackgroundColor ?? defaults.rangePickerBackgroundColor;
+    final Color? headerBackground = themeData.rangePickerHeaderBackgroundColor ?? defaults.rangePickerHeaderBackgroundColor;
     final Color? headerForeground = themeData.rangePickerHeaderForegroundColor ?? defaults.rangePickerHeaderForegroundColor;
     final Color? headerDisabledForeground = headerForeground?.withOpacity(0.38);
     final TextStyle? headlineStyle = themeData.rangePickerHeaderHeadlineStyle ?? defaults.rangePickerHeaderHeadlineStyle;
@@ -1571,7 +1643,7 @@ class _CalendarRangePickerDialog extends StatelessWidget {
           actionsIconTheme: iconTheme,
           elevation: useMaterial3 ? 0 : null,
           scrolledUnderElevation: useMaterial3 ? 0 : null,
-          backgroundColor: useMaterial3 ? Colors.transparent : null,
+          backgroundColor: useMaterial3 ? headerBackground : null,
           leading: CloseButton(
             onPressed: onCancel,
           ),
@@ -2036,14 +2108,11 @@ class _DayHeaders extends StatelessWidget {
   ///
   List<Widget> _getDayHeaders(TextStyle headerStyle, MaterialLocalizations localizations) {
     final List<Widget> result = <Widget>[];
-    for (int i = localizations.firstDayOfWeekIndex; true; i = (i + 1) % 7) {
+    for (int i = localizations.firstDayOfWeekIndex; result.length < DateTime.daysPerWeek; i = (i + 1) % DateTime.daysPerWeek) {
       final String weekday = localizations.narrowWeekdays[i];
       result.add(ExcludeSemantics(
         child: Center(child: Text(weekday, style: headerStyle)),
       ));
-      if (i == (localizations.firstDayOfWeekIndex - 1) % 7) {
-        break;
-      }
     }
     return result;
   }
@@ -2455,13 +2524,9 @@ class _MonthItemState extends State<_MonthItem> {
     final double gridHeight = weeks * _monthItemRowHeight + (weeks - 1) * _monthItemSpaceBetweenRows;
     final List<Widget> dayItems = <Widget>[];
 
-    for (int i = 0; true; i += 1) {
-      // 1-based day of month, e.g. 1-31 for January, and 1-29 for February on
-      // a leap year.
-      final int day = i - dayOffset + 1;
-      if (day > daysInMonth) {
-        break;
-      }
+    // 1-based day of month, e.g. 1-31 for January, and 1-29 for February on
+    // a leap year.
+    for (int day = 0 - dayOffset + 1; day <= daysInMonth; day += 1) {
       if (day < 1) {
         dayItems.add(Container());
       } else {
@@ -2725,14 +2790,25 @@ class _InputDateRangePickerDialog extends StatelessWidget {
 
     switch (orientation) {
       case Orientation.portrait:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            header,
-            Expanded(child: picker),
-            actions,
-          ],
+        return LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final Size portraitDialogSize = useMaterial3 ? _inputPortraitDialogSizeM3 : _inputPortraitDialogSizeM2;
+            // Make sure the portrait dialog can fit the contents comfortably when
+            // resized from the landscape dialog.
+            final bool isFullyPortrait = constraints.maxHeight >= portraitDialogSize.height;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                header,
+                if (isFullyPortrait) ...<Widget>[
+                  Expanded(child: picker),
+                  actions,
+                ],
+              ],
+            );
+          }
         );
 
       case Orientation.landscape:

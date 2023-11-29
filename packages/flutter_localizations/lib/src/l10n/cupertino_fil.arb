@@ -22,5 +22,13 @@
   "tabSemanticsLabel": "Tab $tabIndex ng $tabCount",
   "modalBarrierDismissLabel": "I-dismiss",
   "searchTextFieldPlaceholderLabel": "Hanapin",
+<<<<<<< HEAD
   "noSpellCheckReplacementsLabel": "No Replacements Found"
+=======
+  "noSpellCheckReplacementsLabel": "Walang Nahanap na Kapalit",
+  "menuDismissLabel": "I-dismiss ang menu",
+  "lookUpButtonLabel": "Tumingin sa Itaas",
+  "searchWebButtonLabel": "Search Web",
+  "shareButtonLabel": "Share..."
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 }

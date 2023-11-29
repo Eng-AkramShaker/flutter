@@ -22,5 +22,13 @@
   "tabSemanticsLabel": "$tabCount varaqdan $tabIndex",
   "modalBarrierDismissLabel": "Yopish",
   "searchTextFieldPlaceholderLabel": "Qidiruv",
+<<<<<<< HEAD
   "noSpellCheckReplacementsLabel": "No Replacements Found"
+=======
+  "noSpellCheckReplacementsLabel": "Almashtirish uchun soʻz topilmadi",
+  "menuDismissLabel": "Menyuni yopish",
+  "lookUpButtonLabel": "Tepaga qarang",
+  "searchWebButtonLabel": "Search Web",
+  "shareButtonLabel": "Share..."
+>>>>>>> 7f20e5d18ce4cb80c621533090a7c5113f5bdc52
 }
