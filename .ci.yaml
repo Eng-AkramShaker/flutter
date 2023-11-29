@@ -81,9 +81,16 @@ platform_properties:
         ]
       os: Mac-12
       device_type: none
+<<<<<<< HEAD
       $flutter/osx_sdk : >-
         {
           "sdk_version": "14e300c"
+=======
+      xcode: 14a5294e # xcode 14.0 beta 5
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+>>>>>>> 35a699a3249b7aa1d3bc07667dbc1d07142958e5
         }
   mac_arm64:
     properties:
@@ -94,9 +101,16 @@ platform_properties:
       os: Mac-12
       device_type: none
       cpu: arm64
+<<<<<<< HEAD
       $flutter/osx_sdk : >-
         {
           "sdk_version": "14e300c"
+=======
+      xcode: 14a5294e # xcode 14.0 beta 5
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+>>>>>>> 35a699a3249b7aa1d3bc07667dbc1d07142958e5
         }
   mac_benchmark:
     properties:
@@ -109,9 +123,16 @@ platform_properties:
       os: Mac-12
       tags: >
         ["devicelab", "hostonly", "mac"]
+<<<<<<< HEAD
       $flutter/osx_sdk : >-
         {
           "sdk_version": "14e300c"
+=======
+      xcode: 14a5294e # xcode 14.0 beta 5
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+>>>>>>> 35a699a3249b7aa1d3bc07667dbc1d07142958e5
         }
   mac_x64:
     properties:
@@ -122,6 +143,7 @@ platform_properties:
       os: Mac-12
       device_type: none
       cpu: x86
+<<<<<<< HEAD
       $flutter/osx_sdk : >-
         {
           "sdk_version": "14e300c"
@@ -139,6 +161,12 @@ platform_properties:
       $flutter/osx_sdk : >-
         {
           "sdk_version": "14e300c"
+=======
+      xcode: 14a5294e # xcode 14.0 beta 5
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+>>>>>>> 35a699a3249b7aa1d3bc07667dbc1d07142958e5
         }
   mac_android:
     properties:
@@ -171,9 +199,16 @@ platform_properties:
       os: Mac-12
       cpu: x86
       device_os: iOS-16
+<<<<<<< HEAD
       $flutter/osx_sdk : >-
         {
           "sdk_version": "14e300c"
+=======
+      xcode: 14c18 # Xcode 14.2 to support iOS 16.2 in devicelab.
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14c18"
+>>>>>>> 35a699a3249b7aa1d3bc07667dbc1d07142958e5
         }
   mac_arm64_ios:
     properties:
@@ -185,9 +220,16 @@ platform_properties:
       os: Mac-12
       cpu: arm64
       device_os: iOS-16
+<<<<<<< HEAD
       $flutter/osx_sdk : >-
         {
           "sdk_version": "14e300c"
+=======
+      xcode: 14c18 # Xcode 14.2 to support iOS 16.2 in devicelab.
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14c18"
+>>>>>>> 35a699a3249b7aa1d3bc07667dbc1d07142958e5
         }
   windows:
     properties:
@@ -2906,6 +2948,10 @@ targets:
           {"dependency": "gems", "version": "v3.3.14"}
         ]
       task_name: animated_complex_opacity_perf_macos__e2e_summary
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+        }
 
   - name: Mac_benchmark basic_material_app_macos__compile
     presubmit: false
@@ -2913,6 +2959,10 @@ targets:
     timeout: 60
     properties:
       task_name: basic_material_app_macos__compile
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+        }
 
   - name: Mac build_ios_framework_module_test
     recipe: devicelab/devicelab_drone
@@ -2926,6 +2976,10 @@ targets:
       tags: >
         ["devicelab", "hostonly", "mac"]
       task_name: build_ios_framework_module_test
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+        }
     runIf:
       - dev/**
       - packages/flutter_tools/**
@@ -3028,6 +3082,10 @@ targets:
           {"dependency": "gems", "version": "v3.3.14"}
         ]
       task_name: complex_layout_macos__start_up
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+        }
 
   - name: Mac_benchmark complex_layout_scroll_perf_macos__timeline_summary
     presubmit: false
@@ -3039,6 +3097,10 @@ targets:
           {"dependency": "gems", "version": "v3.3.14"}
         ]
       task_name: complex_layout_scroll_perf_macos__timeline_summary
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+        }
 
   - name: Mac customer_testing
     enabled_branches:
@@ -3078,6 +3140,10 @@ targets:
           {"dependency": "gems", "version": "v3.3.14"}
         ]
       task_name: flutter_gallery_macos__compile
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+        }
 
   - name: Mac_benchmark flutter_gallery_macos__start_up
     presubmit: false
@@ -3089,6 +3155,10 @@ targets:
           {"dependency": "gems", "version": "v3.3.14"}
         ]
       task_name: flutter_gallery_macos__start_up
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+        }
 
   - name: Mac flutter_packaging_test
     recipe: packaging/packaging
@@ -3120,6 +3190,10 @@ targets:
     timeout: 60
     properties:
       task_name: flutter_view_macos__start_up
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+        }
 
   - name: Mac framework_tests_libraries
     recipe: flutter/flutter_drone
@@ -3225,6 +3299,10 @@ targets:
     timeout: 60
     properties:
       task_name: hello_world_macos__compile
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+        }
 
   - name: Mac integration_ui_test_test_macos
     recipe: devicelab/devicelab_drone
@@ -3331,6 +3409,10 @@ targets:
     timeout: 60
     properties:
       task_name: platform_view_macos__start_up
+      $flutter/osx_sdk : >-
+        {
+          "sdk_version": "14a5294e"
+        }
 
   - name: Mac platform_channel_sample_test_macos
     recipe: devicelab/devicelab_drone
